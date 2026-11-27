@@ -6,7 +6,7 @@ import { advanceJourney, createJourney, flightMode, integrateFlight, movementSpe
 import { mountFlightHud } from './flight-hud.js';
 import { createDeepModel } from './deep-visuals.js?v=02g-17';
 import { qualityProfile, minimumDistance, isDeepMode, planTravel } from './deep-math.mjs';
-import './cosmora-astronomy.js?v=02g-18a';
+import './cosmora-astronomy.js?v=02g-18c';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { brightStars } from './hipparcos-bright-stars.js';

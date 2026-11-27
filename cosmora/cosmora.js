@@ -1,5 +1,5 @@
 import { renderQuality, sceneLoop, listenForTap, qualityOptions, reducedMotion } from './runtime-ui.js';
-import { advanceJourney, createJourney, flightMode, integrateFlight, movementSpeed, resolveFlight, validPosition } from './flight.mjs';
+import { advanceJourney, createJourney, flightMode, integrateFlight, movementSpeed, resolveFlight, scaledRadius, validPosition } from './flight.mjs';
 import { mountFlightHud } from './flight-hud.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -325,7 +325,7 @@ function createPlanet(body) {
     const cloudTexture=planetMap('earth_clouds',false);
     const cloud=new THREE.Mesh(new THREE.SphereGeometry(body.radius*1.016,lowQuality?28:48,lowQuality?20:32),new THREE.MeshStandardMaterial({color:0xe6f3ff,alphaMap:cloudTexture,transparent:true,opacity:.58,roughness:1,depthWrite:false}));axisGroup.add(cloud);mesh.userData.cloud=cloud;
     const moonOrbit=new THREE.Group();planetAnchor.add(moonOrbit);moonOrbit.position.x=0;
-  const moon=new THREE.Mesh(new THREE.SphereGeometry(.19,48,32),new THREE.MeshStandardMaterial({map:planetMap('moon'),roughness:1}));moon.position.set(2.05,0,0);moon.userData.bodyId='moon';moonOrbit.add(moon);hitTargets.push(moon);mesh.userData.moonOrbit=moonOrbit;
+  const moon=new THREE.Mesh(new THREE.SphereGeometry(.19,20,14),new THREE.MeshStandardMaterial({map:planetMap('moon'),roughness:1}));moon.position.set(2.05,0,0);moon.userData.moon=true;moonOrbit.add(moon);mesh.userData.moonOrbit=moonOrbit;
   }
   const label=textSprite(body.name,body.id==='neptune'?'#bdceff':'#e3f3ff');label.position.set(0,body.radius+1.2,0);axisGroup.add(label);labelSprites.set(body.id,label);
   const initialPhase=Math.random()*Math.PI*2;
@@ -336,34 +336,16 @@ function createSystem(){createStars();createSun();bodies.forEach(createPlanet);}
 function applyDistanceScale(){planetMeshes.forEach((entry,id)=>{if(id==='sun')return;entry.anchor.position.x=entry.baseDistance*orbitDistanceScale;});orbitLines.forEach((line,index)=>{line.scale.setScalar(orbitDistanceScale);});}
 function applySizeScale(){planetMeshes.forEach((entry,id)=>{if(id==='sun')return;if(entry.axis)entry.axis.scale.setScalar(planetSizeScale);});}
 function getDisplayPosition(id,target=new THREE.Vector3()){
-  return solarMesh(id)?.getWorldPosition(target)??target.set(0,0,0);
+  const entry=planetMeshes.get(id);if(!entry||id==='sun')return target.set(0,0,0);
+  return entry.mesh.getWorldPosition(target);
 }
 function describeRotation(hours){
   const direction=hours<0?' · geriye dönük':'';const abs=Math.abs(hours);
   if(abs<48)return `${abs.toLocaleString('tr-TR',{maximumFractionDigits:1})} saat${direction}`;
   return `${(abs/24).toLocaleString('tr-TR',{maximumFractionDigits:1})} gün (${abs.toLocaleString('tr-TR',{maximumFractionDigits:1})} saat)${direction}`;
 }
-const moonFacts={
-  name:'Ay', type:'DOĞAL UYDU', diameter:'3.475 km', mass:'7,35 × 10²² kg',
-  distance:'Dünya’dan yaklaşık 384.400 km', period:'27,3 gün',
-  rotation:655.7, temperature:'Değişken',
-  gravity:'1,62 m/s²', moons:'—', description:'Dünya’nın doğal uydusu.'
-};
-function solarMesh(id){
-  return id==='moon'?planetMeshes.get('earth')?.moonOrbit?.children[0]:planetMeshes.get(id)?.mesh;
-}
-const worldScale=new THREE.Vector3();
-function worldRadius(mesh){
-  mesh.getWorldScale(worldScale);
-  return mesh.geometry.parameters.radius*Math.max(worldScale.x,worldScale.y,worldScale.z);
-}
-function framingDistance(radius,fraction,tangent){
-  return radius*Math.hypot(1,1/(fraction*tangent));
-}
 function displayBody(id){
-  selectedId=id;const isSun=id==='sun';const body=id==='moon'?moonFacts:bodies.find((item)=>item.id===id);
-  $('#frameRings').hidden=id!=='saturn';
-  $('#distanceLabel').textContent=id==='moon'?'DÜNYA’YA ORT. UZAKLIK':'GÜNEŞ’E ORT. UZAKLIK';
+  selectedId=id;const isSun=id==='sun';const body=bodies.find((item)=>item.id===id);
   document.querySelectorAll('.body-row').forEach((row)=>row.classList.toggle('active',row.dataset.body===id));
   $('#mobileBody').value=id;
   $('#bodyType').textContent=isSun?'MERKEZ YILDIZ':body.type;
@@ -371,42 +353,29 @@ function displayBody(id){
   $('#bodyDescription').textContent=isSun?'Sistemin merkezindeki yıldız. Işığı ve kütleçekimi, gezegenlerin yolculuğunu şekillendirir.':body.description;
   $('#diameter').textContent=isSun?'1.392.700 km':body.diameter;
   $('#mass').textContent=isSun?'1,989 × 10³⁰ kg':body.mass;
-  $('#distance').textContent=isSun?'—':id==='moon'?'384.400 km':`${body.distance} (${body.distanceAu.toLocaleString('tr-TR')} AB)`;
-  $('#year').textContent=isSun?'—':id==='moon'?body.period:`${body.period.toLocaleString('tr-TR')} gün`;
+  $('#distance').textContent=isSun?'—':`${body.distance} (${body.distanceAu.toLocaleString('tr-TR')} AB)`;
+  $('#year').textContent=isSun?'—':`${body.period.toLocaleString('tr-TR')} gün`;
   $('#day').textContent=isSun?'≈ 25 gün (ekvator)':describeRotation(body.rotation);
   $('#temperature').textContent=isSun?'≈ 5.500 °C*':body.temperature;
   $('#gravity').textContent=isSun?'274 m/s²':body.gravity;
   $('#moons').textContent=isSun?'Gezegenleri etkiler':body.moons;
-  $('#factFoot').textContent=isSun?'Güneş bir gezegen değildir; yıldız olarak modellenmiştir.':id==='moon'?'Uzaklık Dünya ile Ay arasındaki ortalama değerdir.':`Uydu sayısı NASA/JPL fact sheet tablosundaki bilinen uydu sayısının anlık görüntüsüdür.`;
+  $('#factFoot').textContent=isSun?'Güneş bir gezegen değildir; yıldız olarak modellenmiştir.':`Uydu sayısı NASA/JPL fact sheet tablosundaki bilinen uydu sayısının anlık görüntüsüdür.`;
   $('#infoPanel').classList.remove('closed');
 }
 function beginSolarJourney(position, target) {
   transition = createJourney(camera.position.toArray(),controls.target.toArray(),position.toArray(),target.toArray(),solarHud.speed());
   movementVelocity.set(0,0,0);
 }
-function animateFocus(id,rings=false){
-  const mesh=solarMesh(id);
-  const position=mesh.getWorldPosition(new THREE.Vector3());
-  const radius=worldRadius(mesh);
-  const tangent=Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()/2));
-  // The projected disk can extend beyond the viewport in close inspection.
-  const diskFraction=['sun','jupiter','saturn','uranus','neptune'].includes(id)?1.10:1.06;
-  const distance=rings
-    ?framingDistance(radius*2.15,.64,tangent*Math.min(1,camera.aspect))
-    :framingDistance(radius,diskFraction,tangent);
-  const direction=new THREE.Vector3();
-  if(id==='sun')direction.copy(camera.position).sub(controls.target);
-  else if(id==='moon')direction.copy(position).sub(getDisplayPosition('earth'));
-  else direction.copy(position).negate();
-  direction.y=0;
-  if(direction.lengthSq()<1e-8)direction.set(0,0,1);
-  direction.normalize().applyAxisAngle(camera.up,.34);
-  direction.y=rings?.76:.48;
-  const endpoint=position.clone().addScaledVector(direction.normalize(),distance);
+function animateFocus(id){
+  const position=getDisplayPosition(id,new THREE.Vector3());
+  const direction=camera.position.clone().sub(controls.target).normalize();
+  if (!direction.lengthSq()) direction.set(0,0,1);
+  const entry=planetMeshes.get(id);
+  const distance=id==='sun'?22:Math.max(entry.baseRadius*planetSizeScale*4.8,3.6);
+  const endpoint=position.clone().addScaledVector(direction,distance);
   beginSolarJourney(endpoint,position);
-  transition.lift=Math.min(20,Math.max(radius,camera.position.distanceTo(endpoint)*.22));
   solarOrbit=false;
-  focusObject=mesh;
+  focusObject=entry.mesh;
   focusPosition.copy(position);
   follow=true;
   $('#followBtn').classList.add('active');
@@ -431,7 +400,7 @@ for (const event of ['pointerdown','wheel']) renderer.domElement.addEventListene
   }
 },{capture:true,passive:true});
 function selectBody(id){
-  if(!solarMesh(id))return;
+  if(!planetMeshes.has(id))return;
   displayBody(id);animateFocus(id);
 }
 function showToast(message){toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2500);}
@@ -472,9 +441,9 @@ let safeSolarPosition=camera.position.toArray(), solarHudStamp=0;
 function resolveSolarCamera() {
   const colliders=[];
   for (const [id,entry] of planetMeshes) {
-    colliders.push({center:entry.mesh.getWorldPosition(solarCenter).toArray(),radius:worldRadius(entry.mesh)*1.06});
+    colliders.push({center:entry.mesh.getWorldPosition(solarCenter).toArray(),radius:scaledRadius(entry.baseRadius,id==='sun'?1:planetSizeScale)});
     const moon=entry.moonOrbit?.children[0];
-    if (moon) colliders.push({center:moon.getWorldPosition(solarCenter).toArray(),radius:worldRadius(moon)*1.06});
+    if (moon) colliders.push({center:moon.getWorldPosition(solarCenter).toArray(),radius:scaledRadius(.19,planetSizeScale)});
   }
   const desired=camera.position.toArray();
   const safe=resolveFlight(solarPrevious.toArray(),desired,colliders,safeSolarPosition);
@@ -530,7 +499,6 @@ function animate(now){
     const state=advanceJourney(transition,delta,focusCenter?.toArray() ?? transition.target);
     transition.elapsed=state.elapsed;
     camera.position.fromArray(state.position);
-    if(transition.lift)camera.position.y+=transition.lift*Math.sin(Math.PI*state.progress)**2;
     controls.target.fromArray(state.look);
     if(state.done) transition=null;
   }else{
@@ -550,32 +518,19 @@ function animate(now){
   }
   if(focusCenter)focusPosition.copy(focusCenter);
   controls.enabled=!transition;
-  controls.minDistance=follow&&focusObject?worldRadius(focusObject)*1.13:3.4;
-  controls.enablePan=!follow;
-  const near=follow&&focusObject?Math.min(.1,worldRadius(focusObject)*.035):.1;
-  if(camera.near!==near){camera.near=near;camera.updateProjectionMatrix();}
-  if(!transition)controls.update();
+  controls.update();
   resolveSolarCamera();
-  if(!transition&&follow&&focusCenter){
-    const offset=camera.position.clone().sub(focusCenter);
-    if(offset.length()<controls.minDistance){
-      if(offset.lengthSq()<1e-10)offset.set(0,0,1);
-      camera.position.copy(focusCenter).add(offset.setLength(controls.minDistance));
-      camera.lookAt(controls.target);
-      safeSolarPosition=camera.position.toArray();
-    }
-  }
   if(now-solarHudStamp>=100){
     solarHudStamp=now;
     const id=focusObject?.userData.bodyId;
-    const body=id==='moon'?moonFacts:planetMeshes.get(id)?.body;
+    const body=planetMeshes.get(id)?.body;
     const direction=camera.getWorldDirection(new THREE.Vector3());
     solarHud.update({
       mode:flightMode({travel:transition,cinematic,orbit:solarOrbit,tracking:follow&&focusObject}),
       target:body?.name ?? (id==='sun'?'Güneş':'Güneş Sistemi'),
       velocity:delta>0?camera.position.distanceTo(solarPrevious)/delta:0,
       range:focusCenter?camera.position.distanceTo(focusCenter):null,
-      astronomical:id==='moon'?moonFacts.distance:body?`${body.distance} (Güneş’e ortalama)`:'',
+      astronomical:body?`${body.distance} (Güneş’e ortalama)`:'',
       bearing:(Math.atan2(direction.x,-direction.z)*180/Math.PI+360)%360,
       fov:camera.fov,fraction:transition?transition.elapsed/transition.duration:null
     });
@@ -602,7 +557,7 @@ const solarQuality=renderQuality(solarSelect,fpsMeter,(level,ratio)=>{
   solarQualityBuilt=planetMeshes.size>0;
   solarLevel=level;
   if(solarStars){const count=solarStars.geometry.attributes.position.count;solarStars.geometry.setDrawRange(0,Math.round(count*{low:.45,medium:.75,high:1}[level]));}
-  const segments={low:36,medium:64,high:96}[level];
+  const segments={low:24,medium:40,high:56}[level];
   const textureSize={low:256,medium:512,high:768}[level];
   for(const [id,entry] of planetMeshes){
     if(id==='sun')continue;
@@ -627,32 +582,10 @@ try{initialize();}catch(error){console.error('COSMORA WebGL başlatma hatası:',
 
 listenForTap(renderer.domElement,event=>{
   const box=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-box.left)/box.width)*2-1;pointer.y=-((event.clientY-box.top)/box.height)*2+1;raycaster.setFromCamera(pointer,camera);
-  const hits=raycaster.intersectObjects(hitTargets,false);if(hits.length){const id=hits[0].object.userData.bodyId;if(id)tapSolarBody(id);}
+  const hits=raycaster.intersectObjects(hitTargets,false);if(hits.length){const id=hits[0].object.userData.bodyId;if(id)selectBody(id);}
 });
-let lastSolarTap=null;
-function tapSolarBody(id){
-  const now=performance.now();
-  if(lastSolarTap?.id===id && now-lastSolarTap.time<420){
-    lastSolarTap=null;
-    selectBody(id);
-    return;
-  }
-  lastSolarTap={id,time:now};
-  displayBody(id);
-}
-document.querySelectorAll('.body-row').forEach(button=>button.addEventListener('click',()=>tapSolarBody(button.dataset.body)));
-$('#mobileBody').addEventListener('change',event=>displayBody(event.target.value));
-$('#approachBody').onclick=()=>selectBody(selectedId);
-$('#frameRings').onclick=()=>animateFocus('saturn',true);
-function zoomSolar(factor){
-  if(transition)return;
-  const offset=camera.position.clone().sub(controls.target);
-  offset.setLength(THREE.MathUtils.clamp(offset.length()*factor,controls.minDistance,controls.maxDistance));
-  camera.position.copy(controls.target).add(offset);
-  controls.update();
-}
-$('#zoomSolarIn').onclick=()=>zoomSolar(.84);
-$('#zoomSolarOut').onclick=()=>zoomSolar(1/.84);
+document.querySelectorAll('.body-row').forEach((button)=>button.addEventListener('click',()=>selectBody(button.dataset.body)));
+$('#mobileBody').addEventListener('change',(event)=>selectBody(event.target.value));
 $('#playBtn').addEventListener('click',()=>{playing=!playing;$('#playGlyph').textContent=playing?'Ⅱ':'▶';$('#playBtn').setAttribute('aria-label',playing?'Simülasyonu duraklat':'Simülasyonu başlat');});
 $('#speedRange').addEventListener('input',(event)=>setSpeed(Number(event.target.value)));
 $('#slowerBtn').addEventListener('click',()=>setSpeed(speedIndex-1));$('#fasterBtn').addEventListener('click',()=>setSpeed(speedIndex+1));
@@ -668,16 +601,7 @@ $('#cinemaBtn').addEventListener('click',()=>{cinematic=!cinematic;$('#simulator
 
 $('#resetBtn').addEventListener('click',resetView);
 // Allows other COSMORA modes to return to the actual animated Earth model.
-window.COSMORA_SOLAR_API={selectBody,cancelMotion:cancelSolarMotion,getBodyPosition:id=>solarMesh(id)?getDisplayPosition(id).toArray():null,
-  getFraming:id=>{
-    const mesh=solarMesh(id);
-    if(!mesh)return null;
-    const offset=getDisplayPosition(id).sub(camera.position);
-    const direction=camera.getWorldDirection(new THREE.Vector3());
-    return {radius:worldRadius(mesh),distance:offset.length(),angle:direction.angleTo(offset),
-      fov:camera.getEffectiveFOV(),aspect:camera.aspect,transition:!!transition,
-      tracking:follow&&mesh===focusObject,texture:mesh.material.map?.image?.width??0};
-  }};
+window.COSMORA_SOLAR_API={selectBody,cancelMotion:cancelSolarMotion,getBodyPosition:(id)=>planetMeshes.has(id)?getDisplayPosition(id,new THREE.Vector3()).toArray():null};
 $('#closeInfo').addEventListener('click',()=>$('#infoPanel').classList.add('closed'));
 $('#scaleInfo').addEventListener('click',()=>$('#noticeDialog').showModal());
 $('.notice-close').addEventListener('click',()=>$('#noticeDialog').close());

@@ -1,3 +1,4 @@
+import { openStellarJourney } from './stellar-journey.js?v=02g-18c';
 import { constellationLines } from './constellation-lines.mjs';
 import { constellationLabels } from './constellation-labels.mjs';
 import { celestialHours, constellationSegments } from './constellation-geometry.mjs?v=02g-16';
@@ -492,6 +493,16 @@ document.querySelector('#simulator').append(journeyBar);
 window.addEventListener('cosmora-deep-journey',()=>{journeyBar.hidden=true;});
 journeyBar.children[0].onclick=()=>ui.querySelector('[data-mode="sky"]').click();
 journeyBar.children[1].onclick=()=>window.COSMORA_SOLAR_API?.cancelMotion();
+let stellarView=null;
+function launchStellarJourney(star,previous){
+  const restore=()=>{
+    stellarView=null;
+    pointCamera(previous.direction);
+    setSkyFov(previous.fov);
+  };
+  try{stellarView=openStellarJourney(star,restore);}
+  catch(error){restore();showToast('Yıldız yakın görünümü başlatılamadı.');console.error(error);}
+}
 function startSkyJourney(target, previous){
   const body=target.body?.toLowerCase();
   const solar=window.COSMORA_SOLAR_API;
@@ -502,8 +513,7 @@ function startSkyJourney(target, previous){
     return;
   }
   if(target.hip){
-    skyReturn=previous;
-    if(window.dispatchEvent(new CustomEvent('cosmora-deep-journey',{cancelable:true,detail:{hip:target.hip}})))skyReturn=null;
+    launchStellarJourney(target,previous);
   }
 }
 listenForTap(renderer.domElement,event=>{
@@ -522,7 +532,7 @@ listenForTap(renderer.domElement,event=>{
     activateSkyTarget(objectList[starHit.index]);
   } else {lastSkyTap=null;clearSelection();}
 });
-const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
+const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(!stellarView&&renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
 window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
 ui.querySelector('[data-mode="sky"]').click();calculateSky();renderActive=true;
 const skyQuality=renderQuality($('#qualityToggle'),skyFps,(level,ratio)=>{
