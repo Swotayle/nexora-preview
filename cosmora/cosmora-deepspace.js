@@ -51,10 +51,10 @@ ds.id = 'deepSpace'; ds.setAttribute('aria-label','Derin Uzay keşif modu'); ds.
   <div class="deep-tool-body">
    <label for="deepSearch">Gök cismi ara</label><input id="deepSearch" type="search" placeholder="Örn. Andromeda, M87*" autocomplete="off">
    <div class="deep-filter" id="deepFilters"></div><div class="deep-list" id="deepList"></div><details class="deep-recent"><summary>Son ziyaret edilenler</summary><div id="deepRecent"></div></details>
-   <div class="deep-toggles"><label><input id="constLines" type="checkbox" checked> Takımyıldızı çizgileri</label><label><input id="constNames" type="checkbox"> Takımyıldızı adları</label><label><input id="constBounds" type="checkbox"> Yaklaşık IAU bölge sınırları</label><label><input id="decorStars" type="checkbox" checked> Dekoratif yıldız alanı</label></div>
+   <div class="deep-toggles"><label><input id="constLines" type="checkbox"> Takımyıldızı çizgileri</label><label><input id="constNames" type="checkbox"> Takımyıldızı adları</label><label><input id="constBounds" type="checkbox"> Yaklaşık IAU bölge sınırları</label><label><input id="decorStars" type="checkbox" checked> Dekoratif yıldız alanı</label></div>
    <label class="quality-label">Grafik kalitesi<select id="deepQuality">${qualityOptions}</select></label>
   </div>
-  <small class="deep-data-note">Bilimsel katalog yıldızları ile dekoratif arka plan ayrı gösterilir.</small>
+  <small class="deep-data-note">Konumlar katalogdan alınır. Galaksiler, bulutsular ve kara delikler temsili 3D modellerdir.</small>
  </aside>
  <aside class="deep-card glass" id="deepCard"><button id="deepClose" aria-label="Bilgiyi kapat">×</button><small id="deepType">GÖK CİSMİ</small><h2 id="deepName">Hedef seç</h2><p id="deepText">Aramadan, listeden veya sahneden bir gök cismi seç.</p><dl><div><dt>Tür</dt><dd id="deepKind">—</dd></div><div><dt>Dünya’ya uzaklık</dt><dd id="deepDistance">—</dd></div><div><dt>Görsel</dt><dd>Ölçeklendirilmiş sanatsal temsil</dd></div></dl><button class="deep-favorite" id="favoriteTarget">☆ Favorilere ekle</button></aside>
  <div class="deep-hud"><span id="travelStatus">SERBEST KEŞİF</span><span id="distanceReadout">Hedef seçilmedi</span><label>Görüş açısı <input id="fovRange" type="range" min="32" max="82" value="54"><b id="fovValue">54°</b></label></div>
@@ -69,24 +69,25 @@ const $=s=>ds.querySelector(s), canvas=$('.deep-canvas');
 let quality=matchMedia('(max-width:760px)').matches?'low':'medium'; 
 if(matchMedia('(max-width:760px)').matches) $('.deep-tools').classList.add('collapsed');
 const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:quality!=='low',powerPreference:'low-power'});
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x030713); scene.fog=new THREE.FogExp2(0x030713,.0012);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x030713); scene.fog=new THREE.FogExp2(0x030713,.0018);
 const camera=new THREE.PerspectiveCamera(54,innerWidth/innerHeight,.1,1800); camera.position.set(0,7,90);
 const controls=new OrbitControls(camera,canvas); controls.enableDamping=true; controls.dampingFactor=.075; controls.minDistance=4; controls.maxDistance=420; controls.rotateSpeed=.48; controls.enablePan=true;
 const starfield=new THREE.BufferGeometry(); const count=qualityProfile('high').background; const arr=new Float32Array(count*3); let seed=2086; const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
 for(let i=0;i<count;i++){const z=rand()*2-1,a=rand()*Math.PI*2,r=rand()*550,s=Math.sqrt(1-z*z);arr.set([r*s*Math.cos(a),r*z,r*s*Math.sin(a)],i*3);}
-starfield.setDrawRange(0,qualityProfile(quality).background);starfield.setAttribute('position',new THREE.BufferAttribute(arr,3)); const bgMat=new THREE.PointsMaterial({color:0xaec9ff,size:.62,transparent:true,opacity:.75,sizeAttenuation:false});const bgStars=new THREE.Points(starfield,bgMat);scene.add(bgStars);
+starfield.setDrawRange(0,qualityProfile(quality).background);starfield.setAttribute('position',new THREE.BufferAttribute(arr,3)); const bgMat=new THREE.PointsMaterial({color:0xa9bde6,size:.42,transparent:true,opacity:.34,sizeAttenuation:false,depthWrite:false});const bgStars=new THREE.Points(starfield,bgMat);scene.add(bgStars);
 const objectRoot=new THREE.Group();scene.add(objectRoot); let active=false, selected=null, travel=null, following=false, animTime=0, picked=[];
 const disposeGroup=group=>{group.traverse(o=>{o.geometry?.dispose();const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{if(m){Object.values(m).forEach(v=>v?.isTexture&&v.dispose());m.dispose();}});});};
 const shaderClock = {value: 0};
 function spatialPosition(item){const ra=(item.ra||0)*Math.PI/12, dec=(item.dec||0)*Math.PI/180;const dist=item.distance||26000;const radius=item.id.startsWith('hip-')?112:28+Math.log10(dist+1)*11;return new THREE.Vector3(-radius*Math.cos(dec)*Math.cos(ra),radius*Math.sin(dec),radius*Math.cos(dec)*Math.sin(ra));}
-function createObjects(){disposeGroup(objectRoot);objectRoot.clear();picked=[];for(const item of targets){const mesh = createDeepModel(item, quality, shaderClock);mesh.position.copy(spatialPosition(item));mesh.userData.target=item;mesh.userData.pickable=true;mesh.scale.setScalar(item.category==='Galaksi'?1.15:item.category==='Bulutsu'?1.2:1);objectRoot.add(mesh);picked.push(mesh);} }
+function createObjects(){disposeGroup(objectRoot);objectRoot.clear();picked=[];for(const item of targets){const mesh = createDeepModel(item, quality, shaderClock);mesh.position.copy(spatialPosition(item));mesh.userData.target=item;mesh.userData.pickable=true;mesh.userData.baseScale=item.category==='Galaksi'?.84:item.category==='Bulutsu'?.68:item.id.startsWith('hip-')?.28:.72;objectRoot.add(mesh);picked.push(mesh);}applyTargetFocus();}
+function applyTargetFocus(){for(const model of picked){const focused=!selected||model.userData.target.id===selected.id;model.scale.setScalar(model.userData.baseScale*(selected?(focused?1.5:.48):.72));}}
 
 const favoriteStore='cosmora-deep-favorites-v1';let favorites=new Set(JSON.parse(localStorage.getItem(favoriteStore)||'[]'));const visitStore='cosmora-deep-visits-v1';let visits=JSON.parse(localStorage.getItem(visitStore)||'[]');
 let category='Tümü';function paintFilters(){const cats=['Tümü','Galaksi','Bulutsu','Yıldız','Kara delik','Favoriler'];$('#deepFilters').innerHTML=cats.map(c=>`<button type="button" class="${category===c?'selected':''}" data-category="${c}">${c}</button>`).join('');$('#deepFilters').querySelectorAll('button').forEach(b=>b.onclick=()=>{category=b.dataset.category;paintFilters();paintList($('#deepSearch').value);});}
 function paintList(query=''){const q=query.trim().toLocaleLowerCase('tr');const list=targets.filter(x=>(category==='Tümü'||category==='Favoriler'&&favorites.has(x.id)||x.category===category)&&(!q||`${x.name} ${x.category} ${x.type}`.toLocaleLowerCase('tr').includes(q)));$('#deepList').innerHTML=list.map(x=>`<button class="deep-row ${selected?.id===x.id?'active':''}" data-id="${x.id}"><i class="kind-${x.category==='Kara delik'?'hole':x.category==='Galaksi'?'galaxy':x.category==='Bulutsu'?'nebula':'star'}"></i><span>${x.name}<small>${x.category}</small></span><b>${favorites.has(x.id)?'★':'›'}</b></button>`).join('')||'<p class="deep-empty">Eşleşen cisim bulunamadı.</p>';$('#deepList').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>selectTarget(targets.find(x=>x.id===b.dataset.id)));}
 function paintRecent(){const recent=visits.map(id=>targets.find(x=>x.id===id)).filter(Boolean);$('#deepRecent').innerHTML=recent.length?recent.map(x=>`<button class="deep-recent-row" data-id="${x.id}">${x.name}<small>${x.category}</small></button>`).join(''):'<small>Henüz ziyaret yok.</small>';$('#deepRecent').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>selectTarget(targets.find(x=>x.id===b.dataset.id)));}
 let previousTarget=null, tracking=false;
-function selectTarget(item){if(!item)return;if(selected?.id!==item.id)previousTarget=selected;selected=item;paintList($('#deepSearch').value);$('#deepType').textContent=item.category.toLocaleUpperCase('tr');$('#deepName').textContent=item.name;$('#deepText').textContent=item.detail;$('#deepKind').textContent=item.type;$('#deepDistance').textContent=item.unit;$('#deepCard').classList.add('open');$('#favoriteTarget').textContent=favorites.has(item.id)?'★ Favorilerden çıkar':'☆ Favorilere ekle';travelTo(item);visits=[item.id,...visits.filter(id=>id!==item.id)].slice(0,8);localStorage.setItem(visitStore,JSON.stringify(visits));paintRecent();}
+function selectTarget(item){if(!item)return;if(selected?.id!==item.id)previousTarget=selected;selected=item;applyTargetFocus();paintList($('#deepSearch').value);$('#deepType').textContent=item.category.toLocaleUpperCase('tr');$('#deepName').textContent=item.name;$('#deepText').textContent=item.detail;$('#deepKind').textContent=item.type;$('#deepDistance').textContent=item.unit;$('#deepCard').classList.add('open');$('#favoriteTarget').textContent=favorites.has(item.id)?'★ Favorilerden çıkar':'☆ Favorilere ekle';travelTo(item);visits=[item.id,...visits.filter(id=>id!==item.id)].slice(0,8);localStorage.setItem(visitStore,JSON.stringify(visits));paintRecent();}
 function stopOrbit() {
   following = false;
   tracking = false;
@@ -116,10 +117,10 @@ function setupConstellations(){
     vertices.push(...segment.map(point=>skyPosition(point,100)));
   }
   const lines=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(vertices),
-    new THREE.LineBasicMaterial({color:0x77d9e8,transparent:true,opacity:.48}));
-  scene.add(lines);
+    new THREE.LineBasicMaterial({color:0x8cb8ce,transparent:true,opacity:.13}));
+  lines.visible=false;scene.add(lines);
   $('#constLines').onchange=event=>lines.visible=event.target.checked;
- const names=new THREE.Group();scene.add(names);const label=txt=>{const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='rgba(182,220,245,.9)';x.font='20px Arial';x.textAlign='center';x.fillText(txt,128,40);const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));s.scale.set(16,4,1);return s;};
+ const names=new THREE.Group();scene.add(names);const label=txt=>{const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='rgba(196,215,235,.66)';x.font='500 19px Manrope, Georgia, serif';x.shadowColor='rgba(0,0,0,.8)';x.shadowBlur=6;x.textAlign='center';x.fillText(txt,128,40);const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));s.scale.set(13,3.25,1);return s;};
  for(const [,name,position] of constellationLabels){const sprite=label(name);sprite.position.copy(skyPosition(position,119));names.add(sprite);}
  $('#constNames').onchange=e=>names.visible=e.target.checked;names.visible=false;
  const bounds=new THREE.Group();scene.add(bounds);bounds.visible=false;$('#constBounds').onchange=e=>bounds.visible=e.target.checked;
@@ -131,7 +132,7 @@ function setupConstellations(){
       const symbol=grid[y*raN+x]?.symbol,nx=(x+1)%raN;
       if(symbol!==grid[y*raN+nx]?.symbol)addEdge(x*raStep+raStep,-90+y*decStep,x*raStep+raStep,-90+(y+1)*decStep);
       if(y<decN-1&&symbol!==grid[(y+1)*raN+x]?.symbol)addEdge(x*raStep,-90+(y+1)*decStep,(x+1)*raStep,-90+(y+1)*decStep);
-    }const flat=segments.flat();geo.setAttribute('position',new THREE.Float32BufferAttribute(flat,3));const lines=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0x9ebce2,transparent:true,opacity:.32}));bounds.add(lines);bounds.userData.ready=true;};
+    }const flat=segments.flat();geo.setAttribute('position',new THREE.Float32BufferAttribute(flat,3));const lines=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0x9ebce2,transparent:true,opacity:.12}));bounds.add(lines);bounds.userData.ready=true;};
  const addEdge=(r1,d1,r2,d2)=>{for(const [rh,dd] of [[r1/15,d1],[r2/15,d2]]){const r=115,a=rh*Math.PI/12,d=dd*Math.PI/180;segments.push([-r*Math.cos(d)*Math.cos(a),r*Math.sin(d),r*Math.cos(d)*Math.sin(a)]);}};requestAnimationFrame(buildChunk);
 }
 setupConstellations();

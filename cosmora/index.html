@@ -2,15 +2,15 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#030711">
   <meta name="description" content="COSMORA: Güneş Sistemi'ni 3D olarak keşfet, gezegenleri incele ve simülasyon hızını değiştir.">
+  <meta name="robots" content="noindex,nofollow">
   <title>COSMORA — 3D Güneş Sistemi | NEXORA</title>
   <link rel="icon" href="../assets/nexora-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="cosmora.css?v=02g"><link rel="stylesheet" href="mobile-controls.css?v=02g-4">
   <script type="importmap">
-    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
+    {"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}
   </script>
   <script>
     const fallbackReasons = {
@@ -43,7 +43,7 @@
     },true);
     window.addEventListener('unhandledrejection',()=>cosmoraModuleFallback());
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" onerror="cosmoraModuleFallback('astronomy')"></script>
+  <script src="./vendor/astronomy-engine/astronomy.browser.min.js" onerror="cosmoraModuleFallback('astronomy')"></script>
   <script type="module" src="cosmora.js?v=02g-4"></script>
   <script type="module" src="cosmora-astronomy.js?v=02g-5"></script>
   <script type="module" src="cosmora-deepspace.js?v=02g-5"></script>
@@ -51,9 +51,9 @@
   <link rel="stylesheet" href="deepspace.css?v=02g-2">
   <link rel="stylesheet" href="flight.css?v=02g-4">
   <link rel="stylesheet" href="mobile-polish.css?v=02g-4">
-</head>
+<link rel="stylesheet" href="experience.css"></head>
 <body>
-  <main class="simulator" id="simulator">
+  <main class="simulator" id="simulator"><details class="advanced"><summary>Ayarlar</summary><label><input id="diagnostics" type="checkbox"> Performans göstergeleri</label><label><input id="venusRadar" type="checkbox"> Venüs radar yüzeyi</label><small>Gezegen haritaları: <a href="https://www.solarsystemscope.com/textures/">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><br>Venüs radarı: NASA/JPL-Caltech<br>Samanyolu: ESO/S. Brunier</small></details>
     <div class="space" id="space" aria-label="Etkileşimli 3D Güneş Sistemi"></div>
     <div class="vignette" aria-hidden="true"></div>
 

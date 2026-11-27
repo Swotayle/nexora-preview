@@ -1,0 +1,3 @@
+.simulator{user-select:none}.simulator input{user-select:text}.advanced{position:absolute;z-index:12;right:14px;top:78px;padding:8px 12px;background:#09101eef;color:#d7e5f0;border-radius:8px;font:13px/1.6 system-ui}.advanced summary,.advanced label{cursor:pointer}.advanced label,.advanced small{display:block}.advanced a{color:#98cbd6}.simulator:not(:has(#diagnostics:checked)) :is(.cosmora-fps,.milky-way-note){display:none!important}
+
+#skyExperience .mode-bar .night-toggle{position:static}.advanced{pointer-events:auto}.sky-result b,#deepSpace .deep-row span{font-size:12px}.deep-active .milky-way-note{display:none}

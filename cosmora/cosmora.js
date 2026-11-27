@@ -69,7 +69,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lowQuality ? 1 : 1.8));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
+renderer.toneMappingExposure = .94;
 host.appendChild(renderer.domElement);
 const fpsMeter=document.createElement('small');fpsMeter.id='solarFps';fpsMeter.className='cosmora-fps';fpsMeter.textContent='— FPS';document.querySelector('.sim-footer')?.append(fpsMeter);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -84,9 +84,13 @@ controls.target.set(0, 0, 0);
 controls.update();
 
 scene.add(new THREE.AmbientLight(0x18223b, 0.72));
-const sunLight = new THREE.PointLight(0xffdfac, 1800, 0, 1.15);
+const sunLight = new THREE.PointLight(0xfff5e8, 3.2, 0, 0);
 sunLight.position.set(0, 0, 0);
 scene.add(sunLight);
+renderer.shadowMap.enabled=true;
+sunLight.castShadow=true;
+sunLight.shadow.mapSize.set(1024,1024);
+sunLight.shadow.bias=-.0002;
 
 function hashNoise(x, y, seed) {
   let n = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
@@ -253,9 +257,16 @@ function createStars() {
   const material=new THREE.PointsMaterial({size:lowQuality?0.45:0.62,sizeAttenuation:true,vertexColors:true,transparent:true,opacity:.85,depthWrite:false});
   solarStars=new THREE.Points(geometry,material);scene.add(solarStars);
 }
+const textureLoader = new THREE.TextureLoader();
+function planetMap(name, color=true, ext='jpg'){
+  const texture = textureLoader.load('./assets/textures/2k_'+name+'.'+ext);
+  texture.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  texture.anisotropy = Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return texture;
+}
 function createSun() {
   const geometry=new THREE.SphereGeometry(3.1,lowQuality?36:64,lowQuality?28:48);
-  const material=new THREE.MeshBasicMaterial({map:makeSunTexture(lowQuality?256:512),color:0xffd69a});
+  const material=new THREE.MeshBasicMaterial({map:planetMap('sun'),color:0xffffff});
   const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);mesh.userData.bodyId='sun';hitTargets.push(mesh);planetMeshes.set('sun',{mesh,pivot:mesh,baseRadius:3.1});
   const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:radialTexture(20,125),color:0xffa74f,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));glow.scale.set(38,38,1);scene.add(glow);
   const corona=new THREE.Mesh(new THREE.SphereGeometry(3.24,48,32),new THREE.MeshBasicMaterial({color:0xffa64c,transparent:true,opacity:.12,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(corona);
@@ -279,30 +290,42 @@ function createPlanet(body) {
   const orbitRoot=new THREE.Group();orbitFrame.add(orbitRoot);
   const pathRadius=body.orbit;
   const planetAnchor=new THREE.Group();planetAnchor.position.x=pathRadius;orbitRoot.add(planetAnchor);
-  const axisGroup=new THREE.Group();axisGroup.rotation.z=THREE.MathUtils.degToRad(body.tilt>90?180-body.tilt:body.tilt);planetAnchor.add(axisGroup);
+  const axisGroup=new THREE.Group();axisGroup.rotation.z=THREE.MathUtils.degToRad(body.tilt);planetAnchor.add(axisGroup);
   const detail=lowQuality?28:56;
-  const material=new THREE.MeshStandardMaterial({map:makeTexture(body.id,body.id.length*17+5,lowQuality?256:512),roughness:body.id==='earth'?.66:.88,metalness:0});
+  const surfaceName = {earth:'earth_daymap',venus:'venus_atmosphere'}[body.id] ?? body.id;
+  const material = new THREE.MeshStandardMaterial({map:planetMap(surfaceName),roughness:1});
   if(body.id==='venus'){
-    const nasaVenusTexture=new THREE.TextureLoader().load(new URL('./assets/textures/venus.jpg',import.meta.url).href,texture=>{
-      texture.colorSpace=THREE.SRGBColorSpace;
-      texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),lowQuality?2:8);
-      material.map=texture;material.needsUpdate=true;
-    },undefined,()=>showToast('Venüs dokusu yüklenemedi. Temsili yüzey gösteriliyor.'));
-    nasaVenusTexture.colorSpace=THREE.SRGBColorSpace;
-  }
-  if(body.id==='earth'){material.emissive=new THREE.Color(0xffa956);material.emissiveMap=makeCityLightsTexture(lowQuality?256:512);material.emissiveIntensity=.28;}
-  const mesh=new THREE.Mesh(new THREE.SphereGeometry(body.radius,detail,Math.floor(detail*.7)),material);mesh.userData.bodyId=body.id;axisGroup.add(mesh);hitTargets.push(mesh);
-  const atmosphereColor={earth:'#6ec5ff',venus:'#ffe1a1',mars:'#e37852',jupiter:'#ffd1a0',saturn:'#ffe4a8',uranus:'#7ceaff',neptune:'#779bff'}[body.id];
-  if(atmosphereColor){const shell=new THREE.Mesh(new THREE.SphereGeometry(body.radius*1.055,lowQuality?24:40,lowQuality?18:28),atmosphereMaterial(atmosphereColor,body.id==='venus'?.38:.72));axisGroup.add(shell);mesh.userData.atmosphere=shell;}
-  if(body.id==='saturn'){
-    const ring=new THREE.Mesh(new THREE.RingGeometry(body.radius*1.28,body.radius*2.15,128),new THREE.MeshStandardMaterial({map:ringTexture(),color:0xe5d0a2,side:THREE.DoubleSide,transparent:true,opacity:.89,roughness:1,depthWrite:false}));
-    ring.rotation.x=Math.PI/2;axisGroup.add(ring);
+    const clouds=material.map;
+    const radar=textureLoader.load('./assets/textures/venus.jpg');
+    radar.colorSpace=THREE.SRGBColorSpace;
+    document.querySelector('#venusRadar').onchange=e=>{material.map=e.target.checked?radar:clouds;};
   }
   if(body.id==='earth'){
-    const cloudTexture=makeCloudAlpha(lowQuality?128:256);
+    material.emissive.set(0xffffff);
+    material.emissiveMap=planetMap('earth_nightmap');
+    material.emissiveIntensity=.8;
+    material.onBeforeCompile=shader=>{
+      shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0-smoothstep(-0.18,0.12,dot(normal,normalize(pointLights[0].position+vViewPosition)));');
+    };
+  }
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(body.radius,detail,Math.floor(detail*.7)),material);mesh.userData.bodyId=body.id;axisGroup.add(mesh);hitTargets.push(mesh);
+  const atmosphereColor={earth:'#6ec5ff',venus:'#ffe1a1',mars:'#e37852',jupiter:'#ffd1a0',saturn:'#ffe4a8',uranus:'#7ceaff',neptune:'#779bff'}[body.id];
+  if(atmosphereColor){const shell=new THREE.Mesh(new THREE.SphereGeometry(body.radius*(body.id==='earth'?1.025:1.055),lowQuality?24:40,lowQuality?18:28),atmosphereMaterial(atmosphereColor,body.id==='venus'?.38:.72));axisGroup.add(shell);mesh.userData.atmosphere=shell;}
+  if(body.id==='saturn'){
+    const ring=new THREE.Mesh(new THREE.RingGeometry(body.radius*1.28,body.radius*2.15,128),new THREE.MeshStandardMaterial({map:planetMap('saturn_ring_alpha',true,'png'),color:0xffffff,side:THREE.DoubleSide,transparent:true,opacity:.89,roughness:1,depthWrite:false}));
+    const radial=ring.geometry.attributes.position;
+    for(let i=0;i<radial.count;i++){
+      const r=Math.hypot(radial.getX(i),radial.getY(i))/body.radius;
+      ring.geometry.attributes.uv.setXY(i,(r-1.28)/(.87),.5);
+    }
+    ring.castShadow=ring.receiveShadow=true;mesh.castShadow=mesh.receiveShadow=true;ring.rotation.x=Math.PI/2;axisGroup.add(ring);
+  }
+  if(body.id==='earth'){
+    const cloudTexture=planetMap('earth_clouds',false);
     const cloud=new THREE.Mesh(new THREE.SphereGeometry(body.radius*1.016,lowQuality?28:48,lowQuality?20:32),new THREE.MeshStandardMaterial({color:0xe6f3ff,alphaMap:cloudTexture,transparent:true,opacity:.58,roughness:1,depthWrite:false}));axisGroup.add(cloud);mesh.userData.cloud=cloud;
     const moonOrbit=new THREE.Group();planetAnchor.add(moonOrbit);moonOrbit.position.x=0;
-  const moon=new THREE.Mesh(new THREE.SphereGeometry(.19,20,14),new THREE.MeshStandardMaterial({map:makeTexture('moon',91,256),roughness:1}));moon.position.set(2.05,0,0);moon.userData.moon=true;moonOrbit.add(moon);mesh.userData.moonOrbit=moonOrbit;
+  const moon=new THREE.Mesh(new THREE.SphereGeometry(.19,20,14),new THREE.MeshStandardMaterial({map:planetMap('moon'),roughness:1}));moon.position.set(2.05,0,0);moon.userData.moon=true;moonOrbit.add(moon);mesh.userData.moonOrbit=moonOrbit;
   }
   const label=textSprite(body.name,body.id==='neptune'?'#bdceff':'#e3f3ff');label.position.set(0,body.radius+1.2,0);axisGroup.add(label);labelSprites.set(body.id,label);
   const initialPhase=Math.random()*Math.PI*2;

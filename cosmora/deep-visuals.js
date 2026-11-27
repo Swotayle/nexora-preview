@@ -90,7 +90,7 @@ function makeGalaxy(id, profile, quality, random) {
   const stars = new THREE.Points(geometry,new THREE.PointsMaterial({size:.16,vertexColors:true,opacity:.84,...additive}));
   group.add(stars);
   group.userData.points = stars;
-  const core = halo(profile.bulge * 2.9, 0xffd9a9, .48, quality.detail);
+  const core = sphere(profile.bulge * 2.2, quality.detail, shader('void main(){float facing=abs(dot(normalize(eyeNormal),normalize(eyeDirection)));gl_FragColor=vec4(1.0,.74,.48,.3*pow(facing,5.0));}',{},additive));
   core.scale.set(1,.61,.8);
   group.add(core);
   const disk = new THREE.Mesh(new THREE.RingGeometry(.5,23,quality.detail * 2), shader(`

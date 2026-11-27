@@ -39,7 +39,7 @@ ui.innerHTML = `
       </details>
       <label class="sky-check"><input id="constellationToggle" type="checkbox" checked> Takımyıldızı çizgileri</label>
       <label class="sky-check"><input id="constellationNamesToggle" type="checkbox" checked> Takımyıldızı adları</label>
-      <label class="sky-check"><input id="labelToggle" type="checkbox" checked> Yıldız adları</label>
+      <label class="sky-check"><input id="labelToggle" type="checkbox"> Yıldız adları</label>
       <label class="sky-check">Grafik kalitesi <select id="qualityToggle">${qualityOptions}</select></label>
     </div>
   </section>
@@ -50,7 +50,7 @@ ui.innerHTML = `
     <dl><div><dt>Takımyıldız</dt><dd id="skyConstellation">—</dd></div><div><dt>HIP katalog no.</dt><dd id="skyHip">—</dd></div><div><dt>Parlaklık</dt><dd id="skyMagnitude">—</dd></div><div><dt>Sağ açıklık / dik açıklık</dt><dd id="skyCoords">—</dd></div><div><dt>Azimut / yükseklik</dt><dd id="skyHorizon">—</dd></div></dl>
   </aside>
   <div class="sky-hud" id="skyHud"><span>KUZEY <b>N</b></span><i></i><span>DOĞU <b>E</b></span><i></i><span>GÜNEY <b>S</b></span><i></i><span>BATI <b>W</b></span></div>
-  <div class="milky-way-note">SAMANYOLU DÜZLEMİ · ŞEMATİK</div>
+  <div class="milky-way-note">SAMANYOLU · YILDIZ TOZU</div>
   <section class="time-dock glass" aria-label="Astronomik zaman kontrolü">
     <div class="time-label"><small>GÖZLEM ZAMANI · YEREL</small><strong id="skyDateLabel"></strong></div>
     <div class="time-actions"><button id="nowBtn">ŞİMDİ</button><button id="reverseBtn" aria-label="Zamanı geriye oynat">◀◀</button><button id="timePlay" aria-label="Zamanı duraklat">Ⅱ</button><button id="forwardBtn" aria-label="Zamanı ileri oynat">▶▶</button><select id="timeSpeed" aria-label="Zaman akış hızı"><option value="60">1 dk/sn</option><option value="3600" selected>1 sa/sn</option><option value="86400">1 gün/sn</option><option value="604800">1 hafta/sn</option></select><input id="datePicker" type="datetime-local" aria-label="Gözlem tarihi ve saati"></div>
@@ -83,7 +83,9 @@ let timeDirection = 1;
 let timePlaying = false;
 let nightVision = false;
 let lowQuality = matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency||8)<=4;
-let controlsCollapsed = false;
+let controlsCollapsed = !matchMedia('(max-width:760px)').matches;
+$('#skyLeft').classList.toggle('collapsed',controlsCollapsed);
+$('#collapseLeft').textContent=controlsCollapsed?'+':'−';
 let renderActive = false;
 let calculationStamp = 0;
 
@@ -168,43 +170,68 @@ scene.add(starRoot);
 const pointGeometry = new THREE.BufferGeometry();
 const pointPositions = new Float32Array(objectList.length * 3);
 const pointSizes = new Float32Array(objectList.length);
+const pointBrightness = new Float32Array(objectList.length);
 for (const [index, {magnitude}] of objectList.entries()) {
-  pointSizes[index] = THREE.MathUtils.clamp(3.8 - magnitude * .65, 1.2, 5.5);
+  pointBrightness[index] = THREE.MathUtils.clamp(1.15 - magnitude * .11, .18, 1);
+  pointSizes[index] = THREE.MathUtils.clamp(1.65 - magnitude * .16, .72, 3.2);
 }
 pointGeometry.setAttribute('position', new THREE.BufferAttribute(pointPositions, 3).setUsage(THREE.DynamicDrawUsage));
+const colorIndices = Float32Array.from(objectList, star => star.ci ?? .55);
+pointGeometry.setAttribute('bv', new THREE.BufferAttribute(colorIndices, 1));
 pointGeometry.setAttribute('pointSize', new THREE.BufferAttribute(pointSizes, 1));
+pointGeometry.setAttribute('pointBrightness', new THREE.BufferAttribute(pointBrightness, 1));
 const starMaterial = new THREE.ShaderMaterial({
   uniforms: {pixelRatio: {value: renderer.getPixelRatio()}},
   transparent: true,
   depthWrite: false,
   vertexShader: `
-    attribute float pointSize;
+    attribute float pointSize; attribute float bv; varying float colorIndex;
+    attribute float pointBrightness;
     uniform float pixelRatio;
+    varying float vBrightness;
     void main() {
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      gl_PointSize = pointSize * pixelRatio * 2.0;
+      colorIndex = bv; vBrightness = pointBrightness;
+      gl_PointSize = (pointSize + pointBrightness * 1.4) * pixelRatio * 2.0;
     }
   `,
   fragmentShader: `
+    varying float colorIndex; varying float vBrightness;
     void main() {
       float radius = length(gl_PointCoord * 2.0 - 1.0);
-      float glow = 1.0 - smoothstep(0.0, 1.0, radius);
-      gl_FragColor = vec4(0.98, 0.97, 0.94, glow * (0.65 + 0.35 * glow));
+      float halo = exp(-radius * radius * 5.5) * 0.22;
+      float core = 1.0 - smoothstep(0.0, 0.22, radius);
+      float alpha = (halo + core * 0.88) * (0.24 + 0.76 * vBrightness);
+      vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.76, 0.58), smoothstep(-0.32,1.65,colorIndex));
+      gl_FragColor = vec4(tint, alpha);
     }
   `
 });
 const points = new THREE.Points(pointGeometry, starMaterial);
 starRoot.add(points);
-const lineMaterial=new THREE.LineBasicMaterial({color:0x78c9dc,transparent:true,opacity:.35,depthWrite:false});
+const lineMaterial=new THREE.LineBasicMaterial({color:0x9bc8dc,transparent:true,opacity:.15,depthWrite:false});
 const figureGroup=new THREE.Group();scene.add(figureGroup);
 const earthSkyRadius=220;
 pointGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), earthSkyRadius + 1);
+const horizonGround=new THREE.Mesh(new THREE.SphereGeometry(earthSkyRadius*.9,96,32,0,2*Math.PI,Math.PI/2,Math.PI/2),new THREE.ShaderMaterial({
+  vertexShader:`varying vec3 vWorldPosition;void main(){vec4 world=modelMatrix*vec4(position,1.0);vWorldPosition=world.xyz;gl_Position=projectionMatrix*viewMatrix*world;}`,
+  fragmentShader:`varying vec3 vWorldPosition;void main(){float altitude=clamp(vWorldPosition.y/length(vWorldPosition),-1.0,0.0);float rim=1.0-smoothstep(0.015,0.28,abs(altitude));float depth=smoothstep(-0.72,-0.02,altitude);vec3 deep=vec3(0.002,0.005,0.014);vec3 horizon=vec3(0.018,0.035,0.078);vec3 color=mix(deep,horizon,depth*0.42+rim*0.42);color+=vec3(0.008,0.018,0.036)*rim;gl_FragColor=vec4(color,1.0);}`,
+  side:THREE.BackSide,depthTest:true,depthWrite:true
+}));
+horizonGround.renderOrder=-1;scene.add(horizonGround);
 const gridGroup=createHorizonGrid();scene.add(gridGroup);
 const milkyWayGeometry=new THREE.BufferGeometry();
-const milkyWaySegments=180;
-milkyWayGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array((milkyWaySegments+1)*2*3),3));
-const milkyWayIndices=[];for(let i=0;i<milkyWaySegments;i++){const a=i*2,b=a+1,c=a+2,d=a+3;milkyWayIndices.push(a,b,c,b,d,c);}milkyWayGeometry.setIndex(milkyWayIndices);
-const milkyWay=new THREE.Mesh(milkyWayGeometry,new THREE.MeshBasicMaterial({color:0x668d9e,transparent:true,opacity:.075,side:THREE.DoubleSide,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending}));scene.add(milkyWay);
+const milkyWaySegments=96,milkyWayRows=24;
+const milkyWayPositions=new Float32Array((milkyWaySegments+1)*(milkyWayRows+1)*3),milkyWayUvs=new Float32Array((milkyWaySegments+1)*(milkyWayRows+1)*2),milkyWayIndices=[];
+for(let i=0;i<=milkyWaySegments;i++)for(let row=0;row<=milkyWayRows;row++){const vertex=i*(milkyWayRows+1)+row;milkyWayUvs.set([i/milkyWaySegments,row/milkyWayRows],vertex*2);if(i<milkyWaySegments&&row<milkyWayRows){const a=vertex,b=vertex+milkyWayRows+1,c=vertex+1,d=b+1;milkyWayIndices.push(a,b,c,b,d,c);}}
+milkyWayGeometry.setAttribute('position',new THREE.BufferAttribute(milkyWayPositions,3).setUsage(THREE.DynamicDrawUsage));milkyWayGeometry.setAttribute('uv',new THREE.BufferAttribute(milkyWayUvs,2));milkyWayGeometry.setIndex(milkyWayIndices);
+const panorama = new THREE.TextureLoader().load('./assets/textures/eso0932a.jpg');
+panorama.wrapS = THREE.RepeatWrapping;
+panorama.repeat.x = -1;
+panorama.offset.x = .5;
+panorama.colorSpace = THREE.SRGBColorSpace;
+const milkyWayMaterial = new THREE.MeshBasicMaterial({map:panorama,side:THREE.DoubleSide,transparent:true,opacity:.38,depthWrite:false});
+const milkyWay=new THREE.Mesh(milkyWayGeometry,milkyWayMaterial);milkyWay.renderOrder=-2;scene.add(milkyWay);
 const nameSprites=new THREE.Group();scene.add(nameSprites);
 const constellationNameSprites=new THREE.Group();scene.add(constellationNameSprites);
 const celestialMarkers=[];
@@ -215,16 +242,13 @@ function horizonVector(azimuth, altitude, radius = earthSkyRadius) {
   return new THREE.Vector3(...horizonCartesian(azimuth, altitude, radius));
 }
 function createHorizonGrid(){
-  const group=new THREE.Group();const material=new THREE.LineBasicMaterial({color:0x8ba7c8,transparent:true,opacity:.14,depthWrite:false});
-  for(let alt=0;alt<=60;alt+=15){const pts=[];for(let az=0;az<=360;az+=3)pts.push(horizonVector(az,alt));group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),material));}
-  for(let az=0;az<360;az+=30){const pts=[];for(let alt=0;alt<=90;alt+=2)pts.push(horizonVector(az,alt));group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),material));}
-  const horizonMat=new THREE.LineBasicMaterial({color:0x81d7dc,transparent:true,opacity:.5});const horizon=[];for(let az=0;az<=360;az++)horizon.push(horizonVector(az,0));group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(horizon),horizonMat));
-  const labels=[[0,'N'],[90,'E'],[180,'S'],[270,'W']];labels.forEach(([az,label])=>{const text=makeLabel(label);text.position.copy(horizonVector(az,2,earthSkyRadius*.9));group.add(text);});return group;
+  const group=new THREE.Group();const material=new THREE.LineBasicMaterial({color:0x8ba7c8,transparent:true,opacity:.055,depthWrite:false});
+    const labels=[[0,'N'],[90,'E'],[180,'S'],[270,'W']];labels.forEach(([az,label])=>{const text=makeLabel(label);text.position.copy(horizonVector(az,1.6,earthSkyRadius*.9));group.add(text);});return group;
 }
-function makeLabel(text){const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;const ctx=canvas.getContext('2d');ctx.font='600 28px Arial';ctx.fillStyle='#c9e4ec';ctx.textAlign='center';ctx.fillText(text,128,42);const texture=new THREE.CanvasTexture(canvas);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));sprite.scale.set(12,3,1);return sprite;}
+function makeLabel(text){const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;const ctx=canvas.getContext('2d');ctx.font='500 27px Manrope, Georgia, serif';ctx.fillStyle='rgba(218,231,246,.82)';ctx.shadowColor='rgba(3,9,21,.92)';ctx.shadowBlur=8;ctx.textAlign='center';ctx.fillText(text,128,42);const texture=new THREE.CanvasTexture(canvas);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));sprite.scale.set(12,3,1);return sprite;}
 function observerSky(date,ra,dec){return Astronomy.Horizon(date,observer,ra,dec,'normal');}
 function galacticToEquatorial(longitude,latitude){const l=THREE.MathUtils.degToRad(longitude),b=THREE.MathUtils.degToRad(latitude),gx=Math.cos(b)*Math.cos(l),gy=Math.cos(b)*Math.sin(l),gz=Math.sin(b);const x=-.0548755604*gx+.4941094279*gy-.8676661490*gz;const y=-.8734370902*gx-.4448296300*gy-.1980763734*gz;const z=-.4838350155*gx+.7469822445*gy+.4559837762*gz;return{ra:(THREE.MathUtils.euclideanModulo(THREE.MathUtils.radToDeg(Math.atan2(y,x)),360))/15,dec:THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(z,-1,1)))};}
-function updateMilkyWay(project){const positions=milkyWayGeometry.attributes.position.array;for(let i=0;i<=milkyWaySegments;i++){const longitude=i/milkyWaySegments*360;for(let edge=0;edge<2;edge++){const eq=galacticToEquatorial(longitude,edge===0?-8:8),h=project(eq.ra,eq.dec),p=horizonVector(h.azimuth,Math.max(0,h.altitude),earthSkyRadius*.985);positions.set([p.x,p.y,p.z],(i*2+edge)*3);}}milkyWayGeometry.attributes.position.needsUpdate=true;milkyWayGeometry.computeBoundingSphere();}
+function updateMilkyWay(project){const positions=milkyWayGeometry.attributes.position.array;for(let i=0;i<=milkyWaySegments;i++){const longitude=i/milkyWaySegments*360;for(let row=0;row<=milkyWayRows;row++){const latitude=(row/milkyWayRows-.5)*180,eq=galacticToEquatorial(longitude,latitude),h=project(eq.ra,eq.dec),p=horizonVector(h.azimuth,h.altitude,earthSkyRadius*.994);p.toArray(positions,(i*(milkyWayRows+1)+row)*3);}}milkyWayGeometry.attributes.position.needsUpdate=true;milkyWayGeometry.computeBoundingSphere();}
 
 function calculateSky() {
   const project = makeJ2000Horizon(Astronomy, observationDate, observer);
@@ -240,7 +264,7 @@ function calculateSky() {
 
   figureGroup.children.forEach(line => line.geometry.dispose());
   figureGroup.clear();
-  if ($('#constellationToggle').checked) {
+  if (selectedStar && $('#constellationToggle').checked) {
     const vertices = [];
     const cache=new Map();
     function position([longitude,latitude]){
@@ -248,7 +272,7 @@ function calculateSky() {
       if(!cache.has(key))cache.set(key,project(celestialHours(longitude),latitude));
       return cache.get(key);
     }
-    for(const [first,second] of constellationSegments(constellationLines)){
+    for(const [first,second] of constellationSegments(constellationLines.filter(([id]) => id === selectedStar.abbreviation))){
       const a=position(first),b=position(second);
       if(a.altitude<-5||b.altitude<-5)continue;
       vertices.push(horizonVector(a.azimuth,a.altitude),horizonVector(b.azimuth,b.altitude));
@@ -274,7 +298,8 @@ function calculateSky() {
   constellationNameSprites.children.forEach(sprite => { sprite.material.map?.dispose(); sprite.material.dispose(); });
   constellationNameSprites.clear();
   if ($('#constellationNamesToggle').checked) {
-    for(const [,name,[longitude,latitude]] of constellationLabels){
+    for(const [id,name,[longitude,latitude]] of constellationLabels){
+      if(id !== selectedStar?.abbreviation) continue;
       const {azimuth,altitude}=project(celestialHours(longitude),latitude);
       if(altitude<=5)continue;
       const label=makeLabel(name);
@@ -297,8 +322,24 @@ function updateSolarMarkers(){
 function toLocalInput(date){const shift=date.getTimezoneOffset()*60000;return new Date(date.getTime()-shift).toISOString().slice(0,16);}
 function fromLocalInput(value){return new Date(value);}
 function formatSexagesimal(ra,dec){const hours=Math.floor(ra),minutes=Math.floor((ra-hours)*60),seconds=(((ra-hours)*60)-minutes)*60;const sign=dec<0?'−':'+';const abs=Math.abs(dec),degrees=Math.floor(abs),dm=Math.floor((abs-degrees)*60),ds=((abs-degrees)*60-dm)*60;return `${hours}h ${minutes}m ${seconds.toFixed(1)}s · ${sign}${degrees}° ${dm}′ ${ds.toFixed(0)}″`;}
-function showStar(star,focus=true){selectedStar=star;const h=makeJ2000Horizon(Astronomy,observationDate,observer)(star.ra,star.dec);$('#skyInfoType').textContent='HIPPARCOS KATALOĞU';$('#skyInfoName').textContent=star.name;$('#skyInfoText').textContent=`${star.name}, Hipparcos kataloğundaki parlak yıldız seçkisinde yer alır. Koordinatlar J2000 dönemine aittir; ufka göre görünen yeri tarih ve gözlemci konumuyla hesaplanır.`;$('#skyConstellation').textContent=star.constellation;$('#skyHip').textContent=`HIP ${star.hip}`;$('#skyMagnitude').textContent=`${star.magnitude.toFixed(2)} kadir`;$('#skyCoords').textContent=formatSexagesimal(star.ra,star.dec);$('#skyHorizon').textContent=`${h.azimuth.toFixed(1)}° / ${h.altitude.toFixed(1)}°${h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(focus&&h.altitude>-2){const direction=horizonVector(h.azimuth,h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
-function showCelestialData(c){$('#skyInfoType').textContent='ASTRONOMY ENGINE';$('#skyInfoName').textContent=c.name;$('#skyInfoText').textContent=`${c.name} için görünür gök koordinatları Astronomy Engine ile seçilen tarih ve gözlem konumunda hesaplanır.`;$('#skyConstellation').textContent=Astronomy.Constellation(c.ra,c.dec).name;$('#skyHip').textContent='—';$('#skyMagnitude').textContent='Bu görünümde gösterilmiyor';$('#skyCoords').textContent=`${c.ra.toFixed(3)}h · ${c.dec.toFixed(2)}°`;$('#skyHorizon').textContent=`${c.h.azimuth.toFixed(1)}° / ${c.h.altitude.toFixed(1)}°${c.h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(c.h.altitude>-2){const direction=horizonVector(c.h.azimuth,c.h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
+function refreshSelection(){
+  objectList.forEach((star,i)=>{
+    pointBrightness[i] = THREE.MathUtils.clamp(1.15-star.magnitude*.11,.18,1) *
+      (selectedStar && star.abbreviation === selectedStar.abbreviation ? 1.3 : 1);
+  });
+  pointGeometry.attributes.pointBrightness.needsUpdate=true;
+  calculateSky();
+}
+function clearSelection(){
+  selectedStar=null;
+  $('#skyInfo').classList.remove('open');
+  refreshSelection();
+}
+function showStar(star,focus=true){const changed = selectedStar !== star;
+  selectedStar = star;
+  if(changed) refreshSelection();
+  const h=makeJ2000Horizon(Astronomy,observationDate,observer)(star.ra,star.dec);$('#skyInfoType').textContent='HIPPARCOS KATALOĞU';$('#skyInfoName').textContent=star.name;$('#skyInfoText').textContent=`${star.name}, Hipparcos kataloğundaki parlak yıldız seçkisinde yer alır. Koordinatlar J2000 dönemine aittir; ufka göre görünen yeri tarih ve gözlemci konumuyla hesaplanır.`;$('#skyConstellation').textContent=star.constellation;$('#skyHip').textContent=`HIP ${star.hip}`;$('#skyMagnitude').textContent=`${star.magnitude.toFixed(2)} kadir`;$('#skyCoords').textContent=formatSexagesimal(star.ra,star.dec);$('#skyHorizon').textContent=`${h.azimuth.toFixed(1)}° / ${h.altitude.toFixed(1)}°${h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(focus&&h.altitude>-2){const direction=horizonVector(h.azimuth,h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
+function showCelestialData(c){if(selectedStar)clearSelection();$('#skyInfoType').textContent='ASTRONOMY ENGINE';$('#skyInfoName').textContent=c.name;$('#skyInfoText').textContent=`${c.name} için görünür gök koordinatları Astronomy Engine ile seçilen tarih ve gözlem konumunda hesaplanır.`;$('#skyConstellation').textContent=Astronomy.Constellation(c.ra,c.dec).name;$('#skyHip').textContent='—';$('#skyMagnitude').textContent='Bu görünümde gösterilmiyor';$('#skyCoords').textContent=`${c.ra.toFixed(3)}h · ${c.dec.toFixed(2)}°`;$('#skyHorizon').textContent=`${c.h.azimuth.toFixed(1)}° / ${c.h.altitude.toFixed(1)}°${c.h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(c.h.altitude>-2){const direction=horizonVector(c.h.azimuth,c.h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
 function showCelestial(item){showCelestialData(item.sprite.userData.celestial);}
 function showToast(message){const el=$('#skyToast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 function updateResults(query=''){
@@ -325,7 +366,7 @@ $('#applyLocation').addEventListener('click',()=>{const lat=Number($('#latitudeI
 $('#geoLocation').addEventListener('click',()=>{if(!navigator.geolocation){showToast('Bu tarayıcı konum isteğini desteklemiyor.');return;}navigator.geolocation.getCurrentPosition(({coords})=>{observer=new Astronomy.Observer(coords.latitude,coords.longitude,coords.altitude||0);placeName='Cihaz konumu';$('#latitudeInput').value=coords.latitude.toFixed(4);$('#longitudeInput').value=coords.longitude.toFixed(4);$('#locationSummary').textContent=placeName;calculateSky();showToast('Konum yalnızca bu cihazda kullanıldı.');},error=>showToast(error.code===1?'Konum izni verilmedi. Şehir veya koordinatı elle seçebilirsin.':'Konum alınamadı. Manuel şehir veya koordinat seçebilirsin.'),{enableHighAccuracy:false,timeout:10000,maximumAge:60000});});
 $('#nightToggle').addEventListener('click',()=>{nightVision=!nightVision;ui.classList.toggle('night-vision',nightVision);$('#nightToggle').setAttribute('aria-pressed',String(nightVision));});
 $('#collapseLeft').addEventListener('click',()=>{controlsCollapsed=!controlsCollapsed;$('#skyLeft').classList.toggle('collapsed',controlsCollapsed);$('#collapseLeft').textContent=controlsCollapsed?'+':'−';});
-$('#closeSkyInfo').addEventListener('click',()=>$('#skyInfo').classList.remove('open'));
+$('#closeSkyInfo').addEventListener('click',clearSelection);
 
 $('#datePicker').min='1800-01-01T00:00';$('#datePicker').max='2100-12-31T23:59';
 $('#datePicker').addEventListener('change',event=>{const date=fromLocalInput(event.target.value);if(Number.isNaN(date.getTime())){showToast('Geçerli bir tarih ve saat seç.');return;}if(date.getFullYear()<1800||date.getFullYear()>2100){observationDate=new Date(Math.min(Math.max(date.getTime(),new Date(1800,0,1).getTime()),new Date(2100,11,31,23,59).getTime()));showToast('Astronomy Engine için doğrulanmış dönem 1800-2100.');}else observationDate=date;calculateSky();});
@@ -352,8 +393,8 @@ listenForTap(renderer.domElement,event=>{
   if (bodyHit && (!starHit || bodyHit.distance <= starHit.distance)) {
     showCelestial({sprite: bodyHit.object});
   } else if (starHit) {
-    showStar(objectList[starHit.index]);
-  }
+    showStar(objectList[starHit.index],false);
+  } else clearSelection();
 });
 const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;if(sensorActive&&sensorReference)camera.quaternion.slerp(sensorDesired,smoothing(delta));else controls.update();if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);skyQuality.frame(now);}};
 window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
