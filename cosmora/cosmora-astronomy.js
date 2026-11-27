@@ -39,7 +39,6 @@ ui.innerHTML = `
       </details>
       <label class="sky-check"><input id="constellationToggle" type="checkbox" checked> Takımyıldızı çizgileri</label>
       <label class="sky-check"><input id="constellationNamesToggle" type="checkbox" checked> Takımyıldızı adları</label>
-      <label class="sky-check"><input id="labelToggle" type="checkbox" checked> Yıldız adları</label>
       <label class="sky-check">Grafik kalitesi <select id="qualityToggle">${qualityOptions}</select></label>
     </div>
   </section>
@@ -49,7 +48,7 @@ ui.innerHTML = `
     <p id="skyInfoText">Bir yıldıza dokun veya arama alanından seç. Gökyüzü konuma ve seçilen tarihe göre hesaplanır.</p>
     <dl><div><dt>Takımyıldız</dt><dd id="skyConstellation">—</dd></div><div><dt>HIP katalog no.</dt><dd id="skyHip">—</dd></div><div><dt>Parlaklık</dt><dd id="skyMagnitude">—</dd></div><div><dt>Sağ açıklık / dik açıklık</dt><dd id="skyCoords">—</dd></div><div><dt>Azimut / yükseklik</dt><dd id="skyHorizon">—</dd></div></dl><section id="starExtras" hidden><p id="physical"></p><button id="aimStar">Odaklan</button> <button id="trackStar">Takip et</button> <button id="favStar">Favorilere ekle</button></section>
   </aside>
-  <div id="skyStarNames"></div><div id="starPointer" hidden><span></span></div><div class="sky-hud" id="skyHud"><span>KUZEY <b>N</b></span><i></i><span>DOĞU <b>E</b></span><i></i><span>GÜNEY <b>S</b></span><i></i><span>BATI <b>W</b></span></div>
+  <div id="skyZoom" aria-label="Yakınlaştırma"><button id="zoomInSky" aria-label="Yakınlaştır">+</button><button id="zoomOutSky" aria-label="Uzaklaştır">−</button></div><div id="starPointer" hidden><span></span></div><div class="sky-hud" id="skyHud"><span>KUZEY <b>N</b></span><i></i><span>DOĞU <b>E</b></span><i></i><span>GÜNEY <b>S</b></span><i></i><span>BATI <b>W</b></span></div>
   
   <section class="time-dock glass" aria-label="Astronomik zaman kontrolü">
     <div class="time-label"><small>GÖZLEM ZAMANI · YEREL</small><strong id="skyDateLabel"></strong></div>
@@ -69,9 +68,6 @@ const objectList = stars.map(star => {
   return {...star, constellation: constellation.name, abbreviation: constellation.symbol};
 });
 const officialConstellations = `Andromeda|And,Antlia|Ant,Apus|Aps,Aquarius|Aqr,Aquila|Aql,Ara|Ara,Aries|Ari,Auriga|Aur,Bootes|Boo,Caelum|Cae,Camelopardalis|Cam,Cancer|Cnc,Canes Venatici|CVn,Canis Major|CMa,Canis Minor|CMi,Capricornus|Cap,Carina|Car, Cassiopeia|Cas,Centaurus|Cen,Cepheus|Cep,Cetus|Cet,Chamaeleon|Cha,Circinus|Cir,Columba|Col,Coma Berenices|Com,Corona Australis|CrA,Corona Borealis|CrB,Corvus|Crv,Crater|Crt,Crux|Cru,Cygnus|Cyg,Delphinus|Del,Dorado|Dor,Draco|Dra,Equuleus|Equ,Eridanus|Eri,Fornax|For,Gemini|Gem,Grus|Gru,Hercules|Her,Horologium|Hor,Hydra|Hya,Hydrus|Hyi,Indus|Ind,Lacerta|Lac,Leo|Leo,Leo Minor|LMi,Lepus|Lep,Libra|Lib,Lupus|Lup,Lynx|Lyn,Lyra|Lyr,Mensa|Men,Microscopium|Mic,Monoceros|Mon,Musca|Mus,Norma|Nor,Octans|Oct,Ophiuchus|Oph,Orion|Ori,Pavo|Pav,Pegasus|Peg,Perseus|Per,Phoenix|Phe,Pictor|Pic,Piscis Austrinus|PsA,Pisces|Psc,Puppis|Pup,Pyxis|Pyx,Reticulum|Ret,Sagitta|Sge,Sagittarius|Sgr,Scorpius|Sco,Sculptor|Scl,Scutum|Sct,Serpens|Ser,Sextans|Sex,Taurus|Tau,Telescopium|Tel,Triangulum|Tri,Triangulum Australe|TrA,Tucana|Tuc,Ursa Major|UMa,Ursa Minor|UMi,Vela|Vel,Virgo|Vir,Volans|Vol,Vulpecula|Vul`.split(',').map(row=>{const [name,abbreviation]=row.trim().split('|');return{name,abbreviation};});
-const labelledStars = objectList.flatMap((star,index) =>
-  /^HIP \d+$/.test(star.name) ? [] : [{star,index,button:null}]
-).sort((a,b)=>a.star.magnitude-b.star.magnitude);
 const starByHip = new Map(objectList.map(s=>[s.hip,s]));
 const skyBodies=[['Sun','Güneş'],['Moon','Ay'],['Mercury','Merkür'],['Venus','Venüs'],['Mars','Mars'],['Jupiter','Jüpiter'],['Saturn','Satürn'],['Uranus','Uranüs'],['Neptune','Neptün']];
 let selectedStar = null;
@@ -302,62 +298,58 @@ function refreshSelection(){
   pointGeometry.attributes.pointBrightness.needsUpdate=true;
   calculateSky();
 }
-const namesLayer=$('#skyStarNames');
-const labelPoint=new THREE.Vector3();
-let lastLabels=-Infinity;
-function layoutStarNames(now){
-  if(now-lastLabels<60)return;
-  lastLabels=now;
-  const occupied=[];
-  const width=renderer.domElement.clientWidth, height=renderer.domElement.clientHeight;
-  const limit=camera.fov<37?5:camera.fov<54?3.8:2.25;
-  for(const entry of labelledStars){
-    const {star,index}=entry;
-    const button=entry.button;
-    if(button)button.hidden=true;
-    if(!$('#labelToggle').checked || star.magnitude>limit || star===selectedStar)continue;
-    labelPoint.fromArray(pointPositions,index*3);
-    if(labelPoint.y<0)continue;
-    labelPoint.project(camera);
-    if(Math.abs(labelPoint.z)>1)continue;
-    const x=(1+labelPoint.x)*width/2+9, y=(1-labelPoint.y)*height/2-9;
-    const w=star.name.length*8+12;
-    if(x<6||x+w>width-6||y<8||y+20>height-8)continue;
-    if(occupied.some(r=>x<r.x+r.w&&x+w>r.x&&Math.abs(y-r.y)<20))continue;
-    occupied.push({x,y,w});
-    if(!entry.button){
-      entry.button=document.createElement('button');
-      entry.button.type='button';
-      entry.button.textContent=star.name;
-      entry.button.dataset.hip=star.hip;
-      entry.button.onclick=()=>showStar(star);
-      namesLayer.append(entry.button);
-    }
-    entry.button.style.transform='translate('+x+'px,'+y+'px)';
-    entry.button.hidden=false;
-  }
+function setSkyFov(fov){
+  camera.fov=THREE.MathUtils.clamp(fov,24,82);
+  camera.updateProjectionMatrix();
 }
-
+$('#zoomInSky').onclick=()=>setSkyFov(camera.fov*.82);
+$('#zoomOutSky').onclick=()=>setSkyFov(camera.fov/.82);
 renderer.domElement.addEventListener('wheel',event=>{
   event.preventDefault();
-  camera.fov=THREE.MathUtils.clamp(camera.fov*Math.exp(Math.sign(event.deltaY)*.1),24,82);
-  camera.updateProjectionMatrix();
+  setSkyFov(camera.fov*Math.exp(Math.sign(event.deltaY)*.1));
 },{passive:false});
+
+let pinch=null;
+function pinchDistance(touches){
+  return Math.hypot(touches[0].clientX-touches[1].clientX,touches[0].clientY-touches[1].clientY);
+}
+renderer.domElement.addEventListener('touchstart',event=>{
+  if(event.touches.length!==2)return;
+  const distance=pinchDistance(event.touches);
+  if(distance<1)return;
+  controls.enableRotate=false;
+  pinch={distance,fov:camera.fov};
+},{passive:true});
+renderer.domElement.addEventListener('touchmove',event=>{
+  if(!pinch || event.touches.length!==2)return;
+  event.preventDefault();
+  const distance=pinchDistance(event.touches);
+  if(distance>=1)setSkyFov(pinch.fov*pinch.distance/distance);
+},{passive:false});
+for(const type of ['touchend','touchcancel']){
+  renderer.domElement.addEventListener(type,event=>{
+    if(event.touches.length<2)pinch=null;
+    if(event.touches.length===0)controls.enableRotate=true;
+  });
+}
 
 const focusFrom=new THREE.Vector3(), focusTurn=new THREE.Quaternion();
 const focusStep=new THREE.Quaternion(), focusDirection=new THREE.Vector3();
 const identity=new THREE.Quaternion();
-let focusStarted=null;
+let focusStarted=null, focusFov=68, endFov=68, onFocused=null;
 function pointCamera(direction){
   camera.position.set(0,0,0);
   controls.target.copy(direction).multiplyScalar(10);
   camera.lookAt(controls.target);
   camera.updateMatrixWorld();
 }
-function beginFocus(direction){
+function beginFocus(direction, zoom=false, done=null){
   if(sensorActive)disableSensor();
   camera.getWorldDirection(focusFrom);
   focusTurn.setFromUnitVectors(focusFrom,direction);
+  focusFov=camera.fov;
+  endFov=zoom?Math.max(24,focusFov*.65):focusFov;
+  onFocused=done;
   focusStarted=performance.now();
 }
 function updateSkyCamera(now,delta){
@@ -365,7 +357,13 @@ function updateSkyCamera(now,delta){
     const t=Math.min(1,(now-focusStarted)/650);
     focusStep.slerpQuaternions(identity,focusTurn,t*t*(3-2*t));
     pointCamera(focusDirection.copy(focusFrom).applyQuaternion(focusStep));
-    if(t===1)focusStarted=null;
+    setSkyFov(THREE.MathUtils.lerp(focusFov,endFov,t*t*(3-2*t)));
+    if(t===1){
+      focusStarted=null;
+      const done=onFocused;
+      onFocused=null;
+      done?.();
+    }
     return;
   }
   if(sensorActive&&sensorReference){
@@ -423,8 +421,8 @@ function showStar(star,focus=true){const changed = selectedStar !== star;
     else if(tracking && focusStarted===null)pointCamera(direction);
   }
 }
-function showCelestialData(c){if(selectedStar)clearSelection();$('#skyInfoType').textContent='ASTRONOMY ENGINE';$('#skyInfoName').textContent=c.name;$('#skyInfoText').textContent=`${c.name} için görünür gök koordinatları Astronomy Engine ile seçilen tarih ve gözlem konumunda hesaplanır.`;$('#skyConstellation').textContent=Astronomy.Constellation(c.ra,c.dec).name;$('#skyHip').textContent='—';$('#skyMagnitude').textContent='Bu görünümde gösterilmiyor';$('#skyCoords').textContent=`${c.ra.toFixed(3)}h · ${c.dec.toFixed(2)}°`;$('#skyHorizon').textContent=`${c.h.azimuth.toFixed(1)}° / ${c.h.altitude.toFixed(1)}°${c.h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(c.h.altitude>-2){const direction=horizonVector(c.h.azimuth,c.h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
-function showCelestial(item){showCelestialData(item.sprite.userData.celestial);}
+function showCelestialData(c,focus=true){if(selectedStar)clearSelection();$('#skyInfoType').textContent='ASTRONOMY ENGINE';$('#skyInfoName').textContent=c.name;$('#skyInfoText').textContent=`${c.name} için görünür gök koordinatları Astronomy Engine ile seçilen tarih ve gözlem konumunda hesaplanır.`;$('#skyConstellation').textContent=Astronomy.Constellation(c.ra,c.dec).name;$('#skyHip').textContent='—';$('#skyMagnitude').textContent='Bu görünümde gösterilmiyor';$('#skyCoords').textContent=`${c.ra.toFixed(3)}h · ${c.dec.toFixed(2)}°`;$('#skyHorizon').textContent=`${c.h.azimuth.toFixed(1)}° / ${c.h.altitude.toFixed(1)}°${c.h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(focus&&c.h.altitude>-2){const direction=horizonVector(c.h.azimuth,c.h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
+
 function showToast(message){const el=$('#skyToast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 function updateResults(query=''){
   const q=query.trim().toLocaleLowerCase('tr-TR');const matching=objectList.filter(s=>!q||s.name.toLocaleLowerCase('tr-TR').includes(q)||s.constellation.toLocaleLowerCase('tr-TR').includes(q)||s.abbreviation.toLowerCase().includes(q)||String(s.hip).includes(q)||`hip ${s.hip}`.includes(q)).slice(0,18);
@@ -441,7 +439,7 @@ renderConstellationList();
 
 $('#skyResults').addEventListener('click',event=>{const solar=event.target.closest('[data-solar-body]');if(solar){const body=solar.dataset.solarBody;const eq=Astronomy.Equator(Astronomy.Body[body],observationDate,observer,true,true);const h=observerSky(observationDate,eq.ra,eq.dec);showCelestialData({body,name:skyBodies.find(item=>item[0]===body)?.[1]||body,ra:eq.ra,dec:eq.dec,h});return;}const b=event.target.closest('[data-hip]');if(!b)return;const star=starByHip.get(Number(b.dataset.hip));if(star)showStar(star);});
 $('#skySearch').addEventListener('input',event=>updateResults(event.target.value));updateResults();
-$('#constellationToggle').addEventListener('change',calculateSky);$('#constellationNamesToggle').addEventListener('change',calculateSky);$('#labelToggle').addEventListener('change',calculateSky);
+$('#constellationToggle').addEventListener('change',calculateSky);$('#constellationNamesToggle').addEventListener('change',calculateSky);
 $('#timePlay').addEventListener('click',()=>{timePlaying=!timePlaying;$('#timePlay').textContent=timePlaying?'Ⅱ':'▶';$('#timePlay').setAttribute('aria-label',timePlaying?'Zamanı duraklat':'Zamanı oynat');});
 $('#reverseBtn').addEventListener('click',()=>{timeDirection=-1;timePlaying=true;$('#timePlay').textContent='Ⅱ';});$('#forwardBtn').addEventListener('click',()=>{timeDirection=1;timePlaying=true;$('#timePlay').textContent='Ⅱ';});
 $('#nowBtn').addEventListener('click',()=>{observationDate=new Date();timePlaying=false;calculateSky();});
@@ -459,13 +457,55 @@ ui.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('clic
   const sky=mode==='sky';renderer.domElement.classList.toggle('mode-hidden',!sky);solarCanvas=host.querySelector('canvas:not(.sky-canvas):not(.deep-canvas)');if(solarCanvas)solarCanvas.classList.toggle('mode-hidden',sky);
   ['skyLeft','skyInfo','skyHud'].forEach(id=>{$(`#${id}`).classList.toggle('mode-hidden',!sky);});$('#nightToggle').classList.toggle('mode-hidden',!sky);document.querySelector('.intro')?.classList.add('mode-hidden');document.querySelector('.planet-panel')?.classList.toggle('mode-hidden',sky);document.querySelector('.info-panel')?.classList.toggle('mode-hidden',sky);document.querySelector('.scene-tools')?.classList.toggle('mode-hidden',sky);document.querySelector('.scale-note')?.classList.toggle('mode-hidden',sky);document.querySelector('.camera-hint')?.classList.toggle('mode-hidden',sky);
   document.querySelector('.control-dock')?.classList.toggle('mode-hidden',sky);document.querySelector('.mobile-body-picker')?.classList.toggle('mode-hidden',sky);document.querySelector('.sim-footer')?.classList.toggle('mode-hidden',sky);$('#timeDockDummy');document.querySelector('.time-dock').classList.toggle('mode-hidden',!sky);
-  marker.hidden=true;namesLayer.hidden=!sky;
-  if(sky){calculateSky();renderActive=true;}else{renderActive=false;}
+  marker.hidden=true;$('#skyZoom').hidden=!sky;
+  if(!sky)focusStarted=null;
+  if(sky){
+    journeyBar.hidden=true;
+    if(skyReturn){pointCamera(skyReturn.direction);setSkyFov(skyReturn.fov);skyReturn=null;}
+    calculateSky();renderActive=true;
+  }else{renderActive=false;}
 }));
 
 // Apply the default Sky mode once all mode listeners exist, hiding the solar canvas until selected.
-ui.querySelector('[data-mode="sky"]').click();
 
+
+let lastSkyTap=null;
+function activateSkyTarget(target){
+  const id=target.body??target.hip;
+  const now=performance.now();
+  const double=lastSkyTap?.id===id && now-lastSkyTap.time<420;
+  lastSkyTap=double?null:{id,time:now};
+  if(target.body)showCelestialData(target,false);
+  else showStar(target,false);
+  if(!double)return;
+  const h=target.h??makeJ2000Horizon(Astronomy,observationDate,observer)(target.ra,target.dec);
+  if(h.altitude<0)return;
+  const previous={direction:camera.getWorldDirection(new THREE.Vector3()),fov:camera.fov};
+  beginFocus(horizonVector(h.azimuth,Math.min(h.altitude,89.999),1).normalize(),true,()=>startSkyJourney(target,previous));
+}
+let skyReturn=null;
+const journeyBar=document.createElement('div');
+journeyBar.className='sky-journey';
+journeyBar.hidden=true;
+journeyBar.innerHTML='<button type="button">Gökyüzüne dön</button><button type="button">Yaklaşmayı iptal et</button>';
+document.querySelector('#simulator').append(journeyBar);
+window.addEventListener('cosmora-deep-journey',()=>{journeyBar.hidden=true;});
+journeyBar.children[0].onclick=()=>ui.querySelector('[data-mode="sky"]').click();
+journeyBar.children[1].onclick=()=>window.COSMORA_SOLAR_API?.cancelMotion();
+function startSkyJourney(target, previous){
+  const body=target.body?.toLowerCase();
+  const solar=window.COSMORA_SOLAR_API;
+  if(body && solar?.getBodyPosition(body)){
+    skyReturn=previous;journeyBar.hidden=false;
+    ui.querySelector('[data-mode="solar"]').click();
+    solar.selectBody(body);
+    return;
+  }
+  if(target.hip){
+    skyReturn=previous;
+    if(window.dispatchEvent(new CustomEvent('cosmora-deep-journey',{cancelable:true,detail:{hip:target.hip}})))skyReturn=null;
+  }
+}
 listenForTap(renderer.domElement,event=>{
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
@@ -476,14 +516,14 @@ listenForTap(renderer.domElement,event=>{
     .filter(({index}) => pointPositions[index * 3 + 1] >= 0)
     .sort((a, b) => a.distanceToRay - b.distanceToRay)[0];
   if (bodyHit && (!starHit || bodyHit.distance <= starHit.distance)) {
-    showCelestial({sprite: bodyHit.object});
+    activateSkyTarget(bodyHit.object.userData.celestial);
   } else if (starHit) {
-    showStar(objectList[starHit.index]);
-  } else clearSelection();
+    activateSkyTarget(objectList[starHit.index]);
+  } else {lastSkyTap=null;clearSelection();}
 });
-const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();layoutStarNames(now);skyQuality.frame(now);}};
+const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
 window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
-calculateSky();renderActive=true;
+ui.querySelector('[data-mode="sky"]').click();calculateSky();renderActive=true;
 const skyQuality=renderQuality($('#qualityToggle'),skyFps,(level,ratio)=>{
   lowQuality=level==='low';
   renderer.setPixelRatio(ratio);

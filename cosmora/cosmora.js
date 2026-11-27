@@ -601,7 +601,7 @@ $('#cinemaBtn').addEventListener('click',()=>{cinematic=!cinematic;$('#simulator
 
 $('#resetBtn').addEventListener('click',resetView);
 // Allows other COSMORA modes to return to the actual animated Earth model.
-window.COSMORA_SOLAR_API={selectBody,getBodyPosition:(id)=>planetMeshes.has(id)?getDisplayPosition(id,new THREE.Vector3()).toArray():null};
+window.COSMORA_SOLAR_API={selectBody,cancelMotion:cancelSolarMotion,getBodyPosition:(id)=>planetMeshes.has(id)?getDisplayPosition(id,new THREE.Vector3()).toArray():null};
 $('#closeInfo').addEventListener('click',()=>$('#infoPanel').classList.add('closed'));
 $('#scaleInfo').addEventListener('click',()=>$('#noticeDialog').showModal());
 $('.notice-close').addEventListener('click',()=>$('#noticeDialog').close());

@@ -4,9 +4,9 @@ import { celestialHours, constellationSegments } from './constellation-geometry.
 import { renderQuality, sceneLoop, listenForTap, qualityOptions, reducedMotion } from './runtime-ui.js';
 import { advanceJourney, createJourney, flightMode, integrateFlight, movementSpeed, resolveFlight, validPosition } from './flight.mjs';
 import { mountFlightHud } from './flight-hud.js';
-import { createDeepModel } from './deep-visuals.js';
+import { createDeepModel } from './deep-visuals.js?v=02g-17';
 import { qualityProfile, minimumDistance, isDeepMode, planTravel } from './deep-math.mjs';
-import './cosmora-astronomy.js?v=02g-16';
+import './cosmora-astronomy.js?v=02g-17';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { brightStars } from './hipparcos-bright-stars.js';
@@ -46,6 +46,7 @@ targets.push(...brightStars.map(s=>({id:`hip-${s.hip}`,name:s.name||`HIP ${s.hip
 const ds = document.createElement('section');
 ds.id = 'deepSpace'; ds.setAttribute('aria-label','Derin Uzay keşif modu'); ds.innerHTML = `
  <canvas class="deep-canvas" aria-label="Etkileşimli derin uzay sahnesi"></canvas>
+ <section class="deep-location" aria-live="polite"><span id="deepRegion">SAMANYOLU · GALAKTİK ÖLÇEK</span><strong id="deepSubject">Samanyolu</strong><small id="deepScale">Güneş’ten merkeze yaklaşık 26.000 ışık yılı</small></section>
  <aside class="deep-tools glass">
   <header><div><small class="deep-kicker">DERİN UZAY KEŞFİ</small><h2>Evren atlası</h2></div><button class="deep-collapse" aria-label="Paneli daralt">−</button></header>
   <div class="deep-tool-body">
@@ -56,9 +57,13 @@ ds.id = 'deepSpace'; ds.setAttribute('aria-label','Derin Uzay keşif modu'); ds.
   </div>
   <small class="deep-data-note">Konumlar katalogdan alınır. Galaksiler, bulutsular ve kara delikler temsili 3D modellerdir.</small>
  </aside>
- <aside class="deep-card glass" id="deepCard"><button id="deepClose" aria-label="Bilgiyi kapat">×</button><small id="deepType">GÖK CİSMİ</small><h2 id="deepName">Hedef seç</h2><p id="deepText">Aramadan, listeden veya sahneden bir gök cismi seç.</p><dl><div><dt>Tür</dt><dd id="deepKind">—</dd></div><div><dt>Dünya’ya uzaklık</dt><dd id="deepDistance">—</dd></div><div><dt>Görsel</dt><dd>Ölçeklendirilmiş sanatsal temsil</dd></div></dl><button class="deep-favorite" id="favoriteTarget">☆ Favorilere ekle</button></aside>
+ <aside class="deep-card glass" id="deepCard"><button id="deepClose" aria-label="Bilgiyi kapat">×</button><small id="deepType">GÖK CİSMİ</small><h2 id="deepName">Hedef seç</h2><p id="deepText">Aramadan, listeden veya sahneden bir gök cismi seç.</p><dl><div><dt>Tür</dt><dd id="deepKind">—</dd></div><div><dt>Dünya’ya uzaklık</dt><dd id="deepDistance">—</dd></div><div><dt>Görsel</dt><dd id="deepRepresentation">Temsili 3B model</dd></div></dl><figure id="deepObservation" hidden><img alt=""><figcaption><a target="_blank" rel="noopener"></a> · <a href="https://www.eso.org/public/copyright/" target="_blank" rel="noopener">CC BY 4.0</a></figcaption></figure><button class="deep-favorite" id="favoriteTarget">☆ Favorilere ekle</button></aside>
  <div class="deep-hud"><span id="travelStatus">SERBEST KEŞİF</span><span id="distanceReadout">Hedef seçilmedi</span><label>Görüş açısı <input id="fovRange" type="range" min="32" max="82" value="54"><b id="fovValue">54°</b></label></div>
- <div class="travel-dock glass"><div class="travel-actions"><button id="travelBtn">Hedefe git</button><button id="stopTravel">Durdur</button><button id="cancelTravel">İptal</button><button id="trackDeep">Takip et</button><button id="inspectDeep">Uzaktan incele</button><button id="previousDeep">Önceki hedef</button><button id="favoriteJump">Favoriler</button><button id="solarOverview">Güneş Sistemi</button><button id="followTarget" aria-pressed="false">Otomatik dolaş</button><button id="cinematicTravel" aria-pressed="false">Sinematik</button><button id="homeSpace">Başlangıç</button><button id="earthReturn">Dünya’ya dön</button><button id="deepFullscreen">Tam ekran</button></div><label>Kamera hızı <input id="cameraSpeed" type="range" min="1" max="10" value="5"><b id="cameraSpeedValue">5</b></label><small>Sinematik yolculuk görsel bir kamera geçişidir; fiziksel seyahat süresini temsil etmez.</small></div>
+ <div class="travel-dock glass">
+  <div class="travel-actions"><button id="exploreDeep">Keşfet</button><button id="travelBtn">Hedefe git</button><button id="inspectDeep">Serbest incele</button><button id="homeSpace">Geri dön</button><button id="earthReturn">Dünya’ya dön</button><button id="deepFullscreen">Tam ekran</button><button id="cancelTravel" hidden>İptal</button>
+  <details class="deep-advanced"><summary>Gelişmiş</summary><div><button id="stopTravel">Durdur</button><button id="trackDeep">Takip et</button><button id="previousDeep">Önceki hedef</button><button id="favoriteJump">Favoriler</button><button id="solarOverview">Güneş Sistemi</button><button id="followTarget" aria-pressed="false">Otomatik dolaş</button><button id="cinematicTravel" aria-pressed="false">Sinematik</button><label>Kamera hızı <input id="cameraSpeed" type="range" min="1" max="10" value="5"><b id="cameraSpeedValue">5</b></label></div></details></div>
+  <small>Görsel simülasyon · Model boyutları ve kamera mesafesi temsilidir.</small>
+ </div>
  <div class="deep-toast" role="status" aria-live="polite"></div>`;
 simulator.append(ds); const fpsMeter=document.createElement('span');fpsMeter.id='deepFps';fpsMeter.className='cosmora-fps';fpsMeter.textContent='— FPS';ds.querySelector('.deep-hud').prepend(fpsMeter);
 const deepButton = document.createElement('button');
@@ -70,7 +75,7 @@ let quality=matchMedia('(max-width:760px)').matches?'low':'medium';
 if(matchMedia('(max-width:760px)').matches) $('.deep-tools').classList.add('collapsed');
 const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:quality!=='low',powerPreference:'low-power'});
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x030713); scene.fog=new THREE.FogExp2(0x030713,.0018);
-const camera=new THREE.PerspectiveCamera(54,innerWidth/innerHeight,.1,1800); camera.position.set(0,7,90);
+const camera=new THREE.PerspectiveCamera(54,innerWidth/innerHeight,.1,1800); camera.position.set(0,48,67);
 const controls=new OrbitControls(camera,canvas); controls.enableDamping=true; controls.dampingFactor=.075; controls.minDistance=4; controls.maxDistance=420; controls.rotateSpeed=.48; controls.enablePan=true;
 const starfield=new THREE.BufferGeometry(); const count=qualityProfile('high').background; const arr=new Float32Array(count*3); let seed=2086; const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
 for(let i=0;i<count;i++){const z=rand()*2-1,a=rand()*Math.PI*2,r=rand()*550,s=Math.sqrt(1-z*z);arr.set([r*s*Math.cos(a),r*z,r*s*Math.sin(a)],i*3);}
@@ -78,16 +83,46 @@ starfield.setDrawRange(0,qualityProfile(quality).background);starfield.setAttrib
 const objectRoot=new THREE.Group();scene.add(objectRoot); let active=false, selected=null, travel=null, following=false, animTime=0, picked=[];
 const disposeGroup=group=>{group.traverse(o=>{o.geometry?.dispose();const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{if(m){Object.values(m).forEach(v=>v?.isTexture&&v.dispose());m.dispose();}});});};
 const shaderClock = {value: 0};
-function spatialPosition(item){const ra=(item.ra||0)*Math.PI/12, dec=(item.dec||0)*Math.PI/180;const dist=item.distance||26000;const radius=item.id.startsWith('hip-')?112:28+Math.log10(dist+1)*11;return new THREE.Vector3(-radius*Math.cos(dec)*Math.cos(ra),radius*Math.sin(dec),radius*Math.cos(dec)*Math.sin(ra));}
-function createObjects(){disposeGroup(objectRoot);objectRoot.clear();picked=[];for(const item of targets){const mesh = createDeepModel(item, quality, shaderClock);mesh.position.copy(spatialPosition(item));mesh.userData.target=item;mesh.userData.pickable=true;mesh.userData.baseScale=item.category==='Galaksi'?.84:item.category==='Bulutsu'?.68:item.id.startsWith('hip-')?.28:.72;objectRoot.add(mesh);picked.push(mesh);}applyTargetFocus();}
-function applyTargetFocus(){for(const model of picked){const focused=!selected||model.userData.target.id===selected.id;model.scale.setScalar(model.userData.baseScale*(selected?(focused?1.5:.48):.72));}}
+const observations={
+  'milky-way':['eso0932a','ESO/S. Brunier'],
+  'orion-nebula':['eso1103a','ESO/Igor Chekalin'],
+  'm87-star':['eso1907a','EHT Collaboration']
+};
+function createObjects(item=selected??targets[0]){
+  disposeGroup(objectRoot);
+  objectRoot.clear();
+  picked=[];
+  if(item.id.startsWith('hip-'))return;
+  const model=createDeepModel(item,quality,shaderClock);
+  model.userData.target=item;
+  objectRoot.add(model);
+  picked.push(model);
+}
+function updatePresentation(item){
+  const overview=!item||item.id==='milky-way';
+  $('#deepRegion').textContent=overview?'SAMANYOLU · GALAKTİK ÖLÇEK':item.category.toLocaleUpperCase('tr');
+  $('#deepSubject').textContent=item?.name??'Samanyolu';
+  $('#deepScale').textContent=item?.unit??'Güneş’ten merkeze yaklaşık 26.000 ışık yılı';
+  const figure=$('#deepObservation'), source=observations[item?.id];
+  figure.hidden=!source;
+  if(source){
+    const [id,credit]=source;
+    const img=figure.querySelector('img'), link=figure.querySelector('a');
+    img.src='./assets/textures/'+id+'.jpg';
+    img.alt=item.name+' · gözlem görüntüsü';
+    link.href='https://www.eso.org/public/images/'+id+'/';
+    link.textContent='Gözlem görüntüsü · '+credit;
+  }
+  $('#deepRepresentation').textContent=item?.id.startsWith('hip-')?'Katalog kaydı':'Temsili 3B model';
+  $('#travelBtn').disabled=!item||item.id.startsWith('hip-');
+}
 
 const favoriteStore='cosmora-deep-favorites-v1';let favorites=new Set(JSON.parse(localStorage.getItem(favoriteStore)||'[]'));const visitStore='cosmora-deep-visits-v1';let visits=JSON.parse(localStorage.getItem(visitStore)||'[]');
 let category='Tümü';function paintFilters(){const cats=['Tümü','Galaksi','Bulutsu','Yıldız','Kara delik','Favoriler'];$('#deepFilters').innerHTML=cats.map(c=>`<button type="button" class="${category===c?'selected':''}" data-category="${c}">${c}</button>`).join('');$('#deepFilters').querySelectorAll('button').forEach(b=>b.onclick=()=>{category=b.dataset.category;paintFilters();paintList($('#deepSearch').value);});}
 function paintList(query=''){const q=query.trim().toLocaleLowerCase('tr');const list=targets.filter(x=>(category==='Tümü'||category==='Favoriler'&&favorites.has(x.id)||x.category===category)&&(!q||`${x.name} ${x.category} ${x.type}`.toLocaleLowerCase('tr').includes(q)));$('#deepList').innerHTML=list.map(x=>`<button class="deep-row ${selected?.id===x.id?'active':''}" data-id="${x.id}"><i class="kind-${x.category==='Kara delik'?'hole':x.category==='Galaksi'?'galaxy':x.category==='Bulutsu'?'nebula':'star'}"></i><span>${x.name}<small>${x.category}</small></span><b>${favorites.has(x.id)?'★':'›'}</b></button>`).join('')||'<p class="deep-empty">Eşleşen cisim bulunamadı.</p>';$('#deepList').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>selectTarget(targets.find(x=>x.id===b.dataset.id)));}
 function paintRecent(){const recent=visits.map(id=>targets.find(x=>x.id===id)).filter(Boolean);$('#deepRecent').innerHTML=recent.length?recent.map(x=>`<button class="deep-recent-row" data-id="${x.id}">${x.name}<small>${x.category}</small></button>`).join(''):'<small>Henüz ziyaret yok.</small>';$('#deepRecent').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>selectTarget(targets.find(x=>x.id===b.dataset.id)));}
 let previousTarget=null, tracking=false;
-function selectTarget(item){if(!item)return;if(selected?.id!==item.id)previousTarget=selected;selected=item;applyTargetFocus();paintList($('#deepSearch').value);$('#deepType').textContent=item.category.toLocaleUpperCase('tr');$('#deepName').textContent=item.name;$('#deepText').textContent=item.detail;$('#deepKind').textContent=item.type;$('#deepDistance').textContent=item.unit;$('#deepCard').classList.add('open');$('#favoriteTarget').textContent=favorites.has(item.id)?'★ Favorilerden çıkar':'☆ Favorilere ekle';travelTo(item);visits=[item.id,...visits.filter(id=>id!==item.id)].slice(0,8);localStorage.setItem(visitStore,JSON.stringify(visits));paintRecent();}
+function selectTarget(item){if(!item)return;if(selected?.id!==item.id){previousTarget=selected;selected=item;createObjects();}updatePresentation(item);paintList($('#deepSearch').value);$('#deepType').textContent=item.category.toLocaleUpperCase('tr');$('#deepName').textContent=item.name;$('#deepText').textContent=item.detail;$('#deepKind').textContent=item.type;$('#deepDistance').textContent=item.unit;$('#deepCard').classList.add('open');$('#favoriteTarget').textContent=favorites.has(item.id)?'★ Favorilerden çıkar':'☆ Favorilere ekle';travelTo(item);visits=[item.id,...visits.filter(id=>id!==item.id)].slice(0,8);localStorage.setItem(visitStore,JSON.stringify(visits));paintRecent();}
 function stopOrbit() {
   following = false;
   tracking = false;
@@ -103,7 +138,14 @@ function startTravel(target, approach) {
 }
 function travelTo(item, factor=1) {
   const model = picked.find(object => object.userData.target.id === item.id);
-  if (model) startTravel(model.position, (({'Galaksi':64,'Bulutsu':52,'Kara delik':24})[item.category] ?? 11)*factor);
+  if(!model){manualDeep();return;}
+  const approach=({'Galaksi':64,'Bulutsu':31,'Kara delik':22})[item.category]??10;
+  const view=item.category==='Galaksi'?new THREE.Vector3(0,52,65):new THREE.Vector3(0,18,85);
+  const distance=camera.position.length();
+  camera.position.copy(view.normalize()).multiplyScalar(Math.max(approach*1.8,distance));
+  controls.target.set(0,0,0);
+  lastSafe=camera.position.toArray();
+  startTravel(model.position,approach*factor);
 }
 function toast(s){const el=$('.deep-toast');el.textContent=s;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2400);}
 function setupConstellations(){
@@ -137,9 +179,9 @@ function setupConstellations(){
 }
 setupConstellations();
 function setDeepMode(mode){
- const on=isDeepMode(mode); if(!on){ travel=null; stopOrbit(); movementKeys.clear(); movementVelocity.set(0,0,0); }
+ const on=isDeepMode(mode); if(!on){ fromSky=false;travel=null; stopOrbit(); movementKeys.clear(); movementVelocity.set(0,0,0); }
  active=on;ds.classList.toggle('visible',on);const sky=document.querySelector('#skyExperience');sky?.classList.toggle('deep-active',on);document.querySelector('#skyExperience [data-mode="deep"]')?.classList.toggle('active',on);
- if(on){if(!picked.length)createObjects();for(const selector of ['.intro','.planet-panel','.info-panel','.scene-tools','.scale-note','.camera-hint','.control-dock','.mobile-body-picker','.sim-footer','#skyExperience .sky-left','#skyExperience .sky-info','#skyExperience .sky-hud','#skyExperience .time-dock','#skyExperience .sky-canvas'])document.querySelector(selector)?.classList.add('mode-hidden');root.querySelector('canvas:not(.deep-canvas)')?.classList.add('mode-hidden');renderer.setSize(innerWidth,innerHeight);deepQuality.resize();}
+ if(on){if(!picked.length&&!selected)createObjects();updatePresentation(selected);for(const selector of ['.intro','.planet-panel','.info-panel','.scene-tools','.scale-note','.camera-hint','.control-dock','.mobile-body-picker','.sim-footer','#skyExperience .sky-left','#skyExperience .sky-info','#skyExperience .sky-hud','#skyExperience .time-dock','#skyExperience .sky-canvas'])document.querySelector(selector)?.classList.add('mode-hidden');root.querySelector('canvas:not(.deep-canvas)')?.classList.add('mode-hidden');renderer.setSize(innerWidth,innerHeight);deepQuality.resize();}
 }
 deepButton.addEventListener('click',()=>{document.querySelectorAll('#skyExperience [data-mode]').forEach(b=>b.classList.toggle('active',b===deepButton));document.querySelector('.sky-canvas')?.classList.add('mode-hidden');root.querySelector('canvas:not(.deep-canvas)')?.classList.add('mode-hidden');document.querySelectorAll('#skyExperience .sky-left,#skyExperience .sky-info,#skyExperience .sky-hud,#skyExperience .time-dock').forEach(el=>el.classList.add('mode-hidden'));document.querySelector('.planet-panel')?.classList.add('mode-hidden');document.querySelector('.info-panel')?.classList.add('mode-hidden');document.querySelector('.control-dock')?.classList.add('mode-hidden');setDeepMode(deepButton.dataset.mode);});
 nav.querySelectorAll('[data-mode]:not([data-mode="deep"])').forEach(b=>b.addEventListener('click',()=>setDeepMode(b.dataset.mode)));
@@ -151,7 +193,7 @@ $('#deepFullscreen').onclick=async()=>{try{if(document.fullscreenElement){await 
 $('#fovRange').oninput=e=>{camera.fov=Number(e.target.value);camera.updateProjectionMatrix();$('#fovValue').textContent=`${camera.fov}°`;};$('#cameraSpeed').oninput=e=>$('#cameraSpeedValue').textContent=e.target.value;
 $('#decorStars').onchange=e=>bgStars.visible=e.target.checked;
 $('.deep-tools').classList.remove('collapsed');
-listenForTap(canvas,e=>{if(!active)return;const rect=canvas.getBoundingClientRect(),m=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),ray=new THREE.Raycaster();ray.params.Points.threshold=1.5;ray.setFromCamera(m,camera);const [hit]=ray.intersectObjects(picked,true);if(hit){let obj=hit.object;while(obj&&!obj.userData.target)obj=obj.parent;if(obj?.userData.target)selectTarget(obj.userData.target);}});
+listenForTap(canvas,e=>{if(!active||travel)return;const rect=canvas.getBoundingClientRect(),m=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),ray=new THREE.Raycaster();ray.params.Points.threshold=1.5;ray.setFromCamera(m,camera);const [hit]=ray.intersectObjects(picked,true);if(hit){let obj=hit.object;while(obj&&!obj.userData.target)obj=obj.parent;if(obj?.userData.target)selectTarget(obj.userData.target);}});
 const movementKeys=new Set(),movementVelocity=new THREE.Vector3(),movementIntent=new THREE.Vector3();
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){cancelMotion();ds.classList.remove('cinematic-deep');$('#cinematicTravel').setAttribute('aria-pressed','false');$('#travelStatus').textContent='SERBEST KEŞİF';return;}if(!active||e.target?.closest?.('input,select,textarea,button,[contenteditable]'))return;const key=e.key.toLowerCase();if(['w','a','s','d','q','e','shift','control'].includes(key)){if(key!=='shift'&&key!=='control'&&(travel||following||tracking||ds.classList.contains('cinematic-deep')))manualDeep();movementKeys.add(key);e.preventDefault();}});
 window.addEventListener('keyup',e=>movementKeys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>movementKeys.clear());
@@ -181,7 +223,12 @@ $('#trackDeep').onclick=()=>{
   tracking=enable;
   $('#travelStatus').textContent=tracking?'HEDEF TAKİPTE':'SERBEST KEŞİF';
 };
-$('#inspectDeep').onclick=()=>{if(selected)travelTo(selected,1.65);else toast('Önce bir hedef seç.');};
+$('#inspectDeep').onclick=manualDeep;
+$('#exploreDeep').onclick=()=>{
+  $('.deep-tools').classList.remove('collapsed');
+  simulator.classList.add('mobile-panels-open');
+  $('#deepSearch').focus();
+};
 $('#previousDeep').onclick=()=>{if(previousTarget)selectTarget(previousTarget);else toast('Önceki hedef yok.');};
 $('#favoriteJump').onclick=()=>{
   category='Favoriler';
@@ -206,13 +253,32 @@ $('#followTarget').onclick = () => {
 $('#cinematicTravel').onclick = () => {
   $('#cinematicTravel').setAttribute('aria-pressed', String(ds.classList.toggle('cinematic-deep')));
 };
-$('#homeSpace').onclick = () => {
-  selected = null;
+let fromSky=false;
+window.addEventListener('cosmora-deep-journey',event=>{
+  const id={32349:'sirius',27989:'betelgeuse',91262:'vega',24436:'rigel',70890:'proxima-centauri',80763:'antares'}[event.detail.hip];
+  const target=targets.find(item=>item.id===id);
+  if(!target)return;
+  event.preventDefault();
+  deepButton.click();
+  fromSky=true;
+  selectTarget(target);
+});
+$('#homeSpace').onclick=()=>{
+  manualDeep();
+  if(fromSky){
+    fromSky=false;
+    nav.querySelector('[data-mode="sky"]').click();
+    return;
+  }
+  selected=null;
+  createObjects();
+  updatePresentation(null);
   paintList($('#deepSearch').value);
   $('#deepCard').classList.remove('open');
-  startTravel(new THREE.Vector3(),90);
-  if(travel)travel.end=[0,7,90];
+  startTravel(new THREE.Vector3(),82);
+  travel.end=[0,48,67];
 };
+
 const up = new THREE.Vector3(0,1,0);
 const forward = new THREE.Vector3(), right = new THREE.Vector3();
 const offset = new THREE.Vector3(), previous = new THREE.Vector3(), movement = new THREE.Vector3();
@@ -259,12 +325,13 @@ function frame(now) {
     camera.position.add(movement);
     controls.target.add(movement);
   }
+  $('#cancelTravel').hidden=!travel;
   controls.enabled = !travel;
   controls.enableDamping = !travel;
   controls.update();
   const desired=camera.position.toArray();
-  const colliders=picked.filter(object=>object===model||['Yıldız','Kara delik'].includes(object.userData.target.category))
-    .map(object=>({center:object.position.toArray(),radius:object===model?minimumDistance(selected.category):2.8}));
+  const colliders=picked.filter(object=>object===model||object.userData.target.id==='milky-way')
+    .map(object=>({center:object.position.toArray(),radius:minimumDistance(object.userData.target.category)}));
   const safe=resolveFlight(previous.toArray(),desired,colliders,lastSafe);
   if(!validPosition(desired)||!validPosition(controls.target.toArray())){
     cancelMotion();

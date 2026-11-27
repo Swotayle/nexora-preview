@@ -87,7 +87,7 @@ function makeGalaxy(id, profile, quality, random) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.BufferAttribute(vertices,3));
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
-  const stars = new THREE.Points(geometry,new THREE.PointsMaterial({size:.16,vertexColors:true,opacity:.84,...additive}));
+  const stars = new THREE.Points(geometry,new THREE.PointsMaterial({size:.125,vertexColors:true,opacity:.74,...additive}));
   group.add(stars);
   group.userData.points = stars;
   const core = sphere(profile.bulge * 2.2, quality.detail, shader('void main(){float facing=abs(dot(normalize(eyeNormal),normalize(eyeDirection)));gl_FragColor=vec4(1.0,.74,.48,.3*pow(facing,5.0));}',{},additive));
@@ -172,15 +172,15 @@ function makeStar(id, magnitude, quality, clock, random) {
     void main(){
       vec3 p=normalize(local)*frequency+vec3(time*activity*.24,0.0,-time*.14);
       float large=grain(p+vec3(grain(p*.52)*2.0));
-      float small=detail>0.01 ? grain(p*2.7) : large;
+      float small=detail>0.01 ? grain(p*5.4) : large;
       float convection=smoothstep(.13,.78,mix(large,small,detail*.36));
       float limb=clamp(dot(normalize(eyeNormal),normalize(eyeDirection)),0.0,1.0);
-      vec3 color=mix(tint*.34,mix(tint,vec3(1.0),.46),convection)*(.65+.48*sqrt(limb));
+      vec3 color=mix(tint*.82,mix(tint,vec3(1.0),.65),convection)*(.48+.60*sqrt(limb));
       gl_FragColor=vec4(color,1.0);
     }`,{tint,time:clock.value,frequency:profile.grain,activity:profile.activity,detail:0}));
   body.material.uniforms.time = clock;
   body.scale.y = profile.flatten ?? 1;
-  group.add(body,halo(profile.radius*1.23,profile.color,.56,quality.detail));
+  group.add(body,halo(profile.radius*1.10,profile.color,.23,quality.detail));
   group.userData.detailMaterial = body.material;
   const flares = new THREE.Group();
   for (let i=0; i<Math.min(profile.flares,quality.layers+1); i++) {
