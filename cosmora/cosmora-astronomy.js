@@ -47,14 +47,14 @@ ui.innerHTML = `
     <button id="closeSkyInfo" class="sky-icon sky-info-close" aria-label="Bilgi panelini kapat">×</button>
     <small class="eyebrow" id="skyInfoType">SEÇİLİ GÖK CİSMİ</small><h2 id="skyInfoName">Gökyüzünü keşfet</h2>
     <p id="skyInfoText">Bir yıldıza dokun veya arama alanından seç. Gökyüzü konuma ve seçilen tarihe göre hesaplanır.</p>
-    <dl><div><dt>Takımyıldız</dt><dd id="skyConstellation">—</dd></div><div><dt>HIP katalog no.</dt><dd id="skyHip">—</dd></div><div><dt>Parlaklık</dt><dd id="skyMagnitude">—</dd></div><div><dt>Sağ açıklık / dik açıklık</dt><dd id="skyCoords">—</dd></div><div><dt>Azimut / yükseklik</dt><dd id="skyHorizon">—</dd></div></dl>
+    <dl><div><dt>Takımyıldız</dt><dd id="skyConstellation">—</dd></div><div><dt>HIP katalog no.</dt><dd id="skyHip">—</dd></div><div><dt>Parlaklık</dt><dd id="skyMagnitude">—</dd></div><div><dt>Sağ açıklık / dik açıklık</dt><dd id="skyCoords">—</dd></div><div><dt>Azimut / yükseklik</dt><dd id="skyHorizon">—</dd></div></dl><section id="starExtras" hidden><p id="physical"></p><button id="aimStar">Odaklan</button> <button id="trackStar">Takip et</button> <button id="favStar">Favorilere ekle</button></section>
   </aside>
-  <div class="sky-hud" id="skyHud"><span>KUZEY <b>N</b></span><i></i><span>DOĞU <b>E</b></span><i></i><span>GÜNEY <b>S</b></span><i></i><span>BATI <b>W</b></span></div>
+  <div id="starPointer" hidden><span></span></div><div class="sky-hud" id="skyHud"><span>KUZEY <b>N</b></span><i></i><span>DOĞU <b>E</b></span><i></i><span>GÜNEY <b>S</b></span><i></i><span>BATI <b>W</b></span></div>
   <div class="milky-way-note">SAMANYOLU · YILDIZ TOZU</div>
   <section class="time-dock glass" aria-label="Astronomik zaman kontrolü">
     <div class="time-label"><small>GÖZLEM ZAMANI · YEREL</small><strong id="skyDateLabel"></strong></div>
     <div class="time-actions"><button id="nowBtn">ŞİMDİ</button><button id="reverseBtn" aria-label="Zamanı geriye oynat">◀◀</button><button id="timePlay" aria-label="Zamanı duraklat">Ⅱ</button><button id="forwardBtn" aria-label="Zamanı ileri oynat">▶▶</button><select id="timeSpeed" aria-label="Zaman akış hızı"><option value="60">1 dk/sn</option><option value="3600" selected>1 sa/sn</option><option value="86400">1 gün/sn</option><option value="604800">1 hafta/sn</option></select><input id="datePicker" type="datetime-local" aria-label="Gözlem tarihi ve saati"></div>
-    <small class="time-disclaimer">Yıldız ufuk konumları Astronomy Engine ile hesaplanır. Katalog koordinatları J2000'dir.</small>
+    <small class="time-disclaimer">Fotoğrafın katalogla hizalaması doğrulanmamıştır. Yalnızca katalog yıldızları seçilebilir. HYG v4.1 · Astronexus · CC BY-SA 4.0. Katalog koordinatları J2000'dir.</small>
   </section>
   <div class="sky-toast" id="skyToast" role="status"></div>`;
 document.querySelector('.simulator').append(ui);
@@ -192,7 +192,7 @@ const starMaterial = new THREE.ShaderMaterial({
     void main() {
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       colorIndex = bv; vBrightness = pointBrightness;
-      gl_PointSize = (pointSize + pointBrightness * 1.4) * pixelRatio * 2.0;
+      gl_PointSize = (pointSize + pointBrightness * 1.4) * pixelRatio * 3.0;
     }
   `,
   fragmentShader: `
@@ -201,7 +201,8 @@ const starMaterial = new THREE.ShaderMaterial({
       float radius = length(gl_PointCoord * 2.0 - 1.0);
       float halo = exp(-radius * radius * 5.5) * 0.22;
       float core = 1.0 - smoothstep(0.0, 0.22, radius);
-      float alpha = (halo + core * 0.88) * (0.24 + 0.76 * vBrightness);
+      if(radius>=1.0) discard;
+      float alpha = (halo*1.5 + exp(-12.0*radius*radius)) * (0.24 + 0.76 * vBrightness);
       vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.76, 0.58), smoothstep(-0.32,1.65,colorIndex));
       gl_FragColor = vec4(tint, alpha);
     }
@@ -330,15 +331,46 @@ function refreshSelection(){
   pointGeometry.attributes.pointBrightness.needsUpdate=true;
   calculateSky();
 }
+const marker=$('#starPointer'), projected=new THREE.Vector3();
+const indices=new Map(objectList.map((s,i)=>[s.hip,i]));
+const favorites=new Set(JSON.parse(localStorage.getItem('cosmora-star-favorites')||'[]'));
+let tracking=false;
+function placeMarker(){
+  marker.hidden=true;
+  if(!selectedStar)return;
+  projected.fromArray(pointPositions,indices.get(selectedStar.hip)*3);
+  if(projected.y<0)return;
+  projected.project(camera);
+  if(Math.max(Math.abs(projected.x),Math.abs(projected.y),Math.abs(projected.z))>1)return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  marker.style.left=(rect.left+(1+projected.x)*rect.width/2)+'px';
+  marker.style.top=(rect.top+(1-projected.y)*rect.height/2)+'px';
+  marker.hidden=false;
+}
+$('#aimStar').onclick=()=>showStar(selectedStar,true);
+$('#trackStar').onclick=()=>{tracking=!tracking;showStar(selectedStar,tracking)};
+$('#favStar').onclick=()=>{
+  const hip=selectedStar.hip;
+  if(favorites.has(hip)) favorites.delete(hip); else favorites.add(hip);
+  localStorage.setItem('cosmora-star-favorites',JSON.stringify([...favorites]));
+  showStar(selectedStar,false);
+};
 function clearSelection(){
+  tracking=false;marker.hidden=true;$('#starExtras').hidden=true;
   selectedStar=null;
   $('#skyInfo').classList.remove('open');
   refreshSelection();
 }
 function showStar(star,focus=true){const changed = selectedStar !== star;
   selectedStar = star;
-  if(changed) refreshSelection();
-  const h=makeJ2000Horizon(Astronomy,observationDate,observer)(star.ra,star.dec);$('#skyInfoType').textContent='HIPPARCOS KATALOĞU';$('#skyInfoName').textContent=star.name;$('#skyInfoText').textContent=`${star.name}, Hipparcos kataloğundaki parlak yıldız seçkisinde yer alır. Koordinatlar J2000 dönemine aittir; ufka göre görünen yeri tarih ve gözlemci konumuyla hesaplanır.`;$('#skyConstellation').textContent=star.constellation;$('#skyHip').textContent=`HIP ${star.hip}`;$('#skyMagnitude').textContent=`${star.magnitude.toFixed(2)} kadir`;$('#skyCoords').textContent=formatSexagesimal(star.ra,star.dec);$('#skyHorizon').textContent=`${h.azimuth.toFixed(1)}° / ${h.altitude.toFixed(1)}°${h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(focus&&h.altitude>-2){const direction=horizonVector(h.azimuth,h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
+  if(changed){tracking=false;refreshSelection();}
+  marker.firstElementChild.textContent=star.name;
+  $('#starExtras').hidden=false;
+  $('#favStar').textContent=favorites.has(star.hip)?'Favoriden çıkar':'Favorilere ekle';
+  $('#trackStar').textContent=tracking?'Takibi durdur':'Takip et';
+  const type={III:'Dev',IV:'Altdev',V:'Ana kol',II:'Parlak dev',Ia:'Süperdev',Ib:'Süperdev'}[star.spectrum?.match(/(III|IV|II|V|Ia|Ib)$/)?.[1]];
+  $('#physical').textContent=['Tür: '+(type||'Veri yok'),'Uzaklık: '+(star.distancePc?(star.distancePc*3.26156).toFixed(1)+' ışık yılı':'Veri yok'),'Spektral sınıf: '+(star.spectrum||'Veri yok'),'Renk (B−V): '+(star.ci?.toFixed(2)??'Veri yok'),'Yüzey sıcaklığı: Veri yok'].join(' · ');
+  const h=makeJ2000Horizon(Astronomy,observationDate,observer)(star.ra,star.dec);$('#skyInfoType').textContent='HIPPARCOS KATALOĞU';$('#skyInfoName').textContent=star.name;$('#skyInfoText').textContent=`${star.name}, Hipparcos kataloğundaki parlak yıldız seçkisinde yer alır. Koordinatlar J2000 dönemine aittir; ufka göre görünen yeri tarih ve gözlemci konumuyla hesaplanır.`;$('#skyConstellation').textContent=star.constellation;$('#skyHip').textContent=`HIP ${star.hip}`;$('#skyMagnitude').textContent=`${star.magnitude.toFixed(2)} kadir`;$('#skyCoords').textContent=formatSexagesimal(star.ra,star.dec);$('#skyHorizon').textContent=`${h.azimuth.toFixed(1)}° / ${h.altitude.toFixed(1)}°${h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if((focus||tracking)&&h.altitude>=0){const direction=horizonVector(h.azimuth,h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
 function showCelestialData(c){if(selectedStar)clearSelection();$('#skyInfoType').textContent='ASTRONOMY ENGINE';$('#skyInfoName').textContent=c.name;$('#skyInfoText').textContent=`${c.name} için görünür gök koordinatları Astronomy Engine ile seçilen tarih ve gözlem konumunda hesaplanır.`;$('#skyConstellation').textContent=Astronomy.Constellation(c.ra,c.dec).name;$('#skyHip').textContent='—';$('#skyMagnitude').textContent='Bu görünümde gösterilmiyor';$('#skyCoords').textContent=`${c.ra.toFixed(3)}h · ${c.dec.toFixed(2)}°`;$('#skyHorizon').textContent=`${c.h.azimuth.toFixed(1)}° / ${c.h.altitude.toFixed(1)}°${c.h.altitude<0?' · ufkun altında':''}`;$('#skyInfo').classList.add('open');if(c.h.altitude>-2){const direction=horizonVector(c.h.azimuth,c.h.altitude,1).normalize();controls.target.copy(direction).multiplyScalar(10);camera.position.set(0,0,0);controls.update();}}
 function showCelestial(item){showCelestialData(item.sprite.userData.celestial);}
 function showToast(message){const el=$('#skyToast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
@@ -375,6 +407,7 @@ ui.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('clic
   const sky=mode==='sky';renderer.domElement.classList.toggle('mode-hidden',!sky);solarCanvas=host.querySelector('canvas:not(.sky-canvas):not(.deep-canvas)');if(solarCanvas)solarCanvas.classList.toggle('mode-hidden',sky);
   ['skyLeft','skyInfo','skyHud'].forEach(id=>{$(`#${id}`).classList.toggle('mode-hidden',!sky);});$('#nightToggle').classList.toggle('mode-hidden',!sky);document.querySelector('.intro')?.classList.add('mode-hidden');document.querySelector('.planet-panel')?.classList.toggle('mode-hidden',sky);document.querySelector('.info-panel')?.classList.toggle('mode-hidden',sky);document.querySelector('.scene-tools')?.classList.toggle('mode-hidden',sky);document.querySelector('.scale-note')?.classList.toggle('mode-hidden',sky);document.querySelector('.camera-hint')?.classList.toggle('mode-hidden',sky);
   document.querySelector('.control-dock')?.classList.toggle('mode-hidden',sky);document.querySelector('.mobile-body-picker')?.classList.toggle('mode-hidden',sky);document.querySelector('.sim-footer')?.classList.toggle('mode-hidden',sky);$('#timeDockDummy');document.querySelector('.time-dock').classList.toggle('mode-hidden',!sky);
+  marker.hidden=true;
   if(sky){calculateSky();renderActive=true;}else{renderActive=false;}
 }));
 
@@ -382,11 +415,11 @@ ui.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('clic
 ui.querySelector('[data-mode="sky"]').click();
 
 listenForTap(renderer.domElement,event=>{
-  if(sensorActive)return;
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
   raycaster.setFromCamera(pointer, camera);
   const [bodyHit] = raycaster.intersectObjects(celestialMarkers.map(({sprite}) => sprite), false);
+  raycaster.params.Points.threshold=2*earthSkyRadius*Math.tan(camera.fov*Math.PI/360)*(event.pointerType==='touch'?13:6)/rect.height;
   const starHit = raycaster.intersectObject(points, false)
     .filter(({index}) => pointPositions[index * 3 + 1] >= earthSkyRadius * Math.sin(-2 * Math.PI / 180))
     .sort((a, b) => a.distanceToRay - b.distanceToRay)[0];
@@ -396,7 +429,7 @@ listenForTap(renderer.domElement,event=>{
     showStar(objectList[starHit.index],false);
   } else clearSelection();
 });
-const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;if(sensorActive&&sensorReference)camera.quaternion.slerp(sensorDesired,smoothing(delta));else controls.update();if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);skyQuality.frame(now);}};
+const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;if(sensorActive&&sensorReference)camera.quaternion.slerp(sensorDesired,smoothing(delta));else controls.update();if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
 window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
 calculateSky();renderActive=true;
 const skyQuality=renderQuality($('#qualityToggle'),skyFps,(level,ratio)=>{

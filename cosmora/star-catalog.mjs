@@ -17,6 +17,7 @@ export function validateStarCatalog(payload) {
       ra: star.ra,
       dec: star.dec,
       magnitude: star.magnitude,
+      distancePc: star.distancePc ?? null, spectrum: star.spectrum ?? null,
       ci: star.ci ?? null,
       name: typeof star.name === 'string' && star.name.trim() ? star.name.trim() : `HIP ${star.hip}`
     };
