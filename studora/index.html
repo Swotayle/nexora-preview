@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>STUDORA — Öğrenci Kontrol Merkezi</title>
+<link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="studora.css">
+<script src="studora.js" defer></script>
+</head>
+<body>
+<div class="app" id="app">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#merkez"><span class="brand-icon" aria-hidden="true">✦</span><span>STUDORA<small>Öğrenci kontrol merkezi</small></span></a>
+<button type="button" class="icon mobile-close" id="closeMenu" aria-label="Menüyü kapat">×</button>
+<nav aria-label="STUDORA bölümleri">
+<a href="#merkez" aria-label="Kontrol Merkezi"><span aria-hidden="true">◈</span><b>Kontrol Merkezi</b></a>
+<a href="#dersler" aria-label="Ders Programı"><span aria-hidden="true">▦</span><b>Ders Programı</b></a>
+<a href="#sinavlar" aria-label="Sınav Takvimi"><span aria-hidden="true">◷</span><b>Sınav Takvimi</b></a>
+<a href="#gorevler" aria-label="Görevler"><span aria-hidden="true">☷</span><b>Görevler</b></a>
+</nav>
+<a class="back" aria-label="NEXORA’ya dön" href="../index.html"><span aria-hidden="true">←</span><b>NEXORA’ya dön</b></a>
+</aside>
+<div class="workspace">
+<header class="top"><div><button class="icon" id="menu" type="button" aria-label="Menüyü daralt veya aç" aria-controls="sidebar">☰</button><span id="breadcrumb">Kontrol Merkezi</span></div><button id="theme" class="secondary" type="button">Açık tema</button></header>
+<main id="main">
+<section id="merkez" class="page">
+<div class="hero"><div><div class="eyebrow" id="today"></div><h1>Geleceğini Bugünden Tasarla.</h1><p>Programını düzenle, yaklaşan sınavlarını takip et ve çalışma hedefini planla.</p><button data-add="study" class="primary">+ Çalışma kaydet</button></div><div class="orb" aria-hidden="true"><i></i><i></i><i></i></div></div>
+<div class="stats" id="stats"></div>
+<div class="quick"><button class="secondary" data-add="lessons">+ Ders ekle</button><button class="secondary" data-add="exams">+ Sınav ekle</button><button class="secondary" data-add="tasks">+ Görev ekle</button></div>
+<div class="dashboard"><article class="panel"><header><h2>Bugünkü dersler</h2><a href="#dersler" aria-label="Ders Programı">Programı aç ↗</a></header><div id="todayLessons"></div></article>
+<article class="panel"><header><h2>Haftalık çalışma</h2><button id="setGoal" class="secondary" data-add="goal">Hedefi düzenle</button></header><div id="chart"></div><details id="studyHistory" hidden><summary>Çalışma kayıtları</summary><div id="studyList"></div></details></article>
+<article class="panel"><header><h2>Yaklaşan sınavlar</h2><a href="#sinavlar" aria-label="Sınav Takvimi">Takvimi aç ↗</a></header><div id="nextExams"></div></article>
+<article class="panel"><header><h2>Bekleyen görevler</h2><a href="#gorevler" aria-label="Görevler">Görevleri aç ↗</a></header><div id="pendingTasks"></div></article></div>
+</section>
+<section id="dersler" class="page" hidden><div class="page-head"><div><h1>Ders Programı</h1><p>Haftalık derslerini gün ve saatlerine göre düzenle.</p></div><button class="primary" data-add="lessons">+ Ders ekle</button></div><div class="week" id="week"></div></section>
+<section id="sinavlar" class="page" hidden><div class="page-head"><div><h1>Sınav Takvimi</h1><p>Tarihine göre sıralanan sınavlar ve arşivin.</p></div><button class="primary" data-add="exams">+ Sınav ekle</button></div><div id="examList"></div><details class="panel archive"><summary>Tamamlanan sınavlar <span id="archiveCount"></span></summary><div id="examArchive"></div></details></section>
+<section id="gorevler" class="page" hidden><div class="page-head"><div><h1>Görevler</h1><p>Ödevlerini ve çalışma görevlerini yönet.</p></div><button class="primary" data-add="tasks">+ Görev ekle</button></div><div class="filters"><label>Ara<input id="search" type="search" placeholder="Görev veya ders ara"></label><label>Durum<select id="status"><option value="all">Tümü</option><option value="pending">Bekleyen</option><option value="done">Tamamlanan</option><option value="late">Geciken</option></select></label><label>Öncelik<select id="priority"><option value="all">Tümü</option><option value="high">Yüksek</option><option value="medium">Orta</option><option value="low">Düşük</option></select></label></div><div id="taskList"></div></section>
+</main>
+<footer class="footer">STUDORA · Verilerin bu tarayıcıda saklanır.</footer>
+</div>
+</div>
+<dialog id="editor" aria-labelledby="editorTitle"><form id="editorForm"><header><h2 id="editorTitle"></h2><button type="button" class="icon" id="closeEditor" aria-label="Pencereyi kapat">×</button></header><div id="fields"></div><p id="formError" class="form-error" role="alert" hidden></p><footer><button type="button" class="secondary" id="cancelEditor">Vazgeç</button><button class="primary" type="submit" id="save">Kaydet</button></footer></form></dialog>
+<p id="notice" role="status" class="notice"></p>
+</body>
+</html>
