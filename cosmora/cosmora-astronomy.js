@@ -198,9 +198,9 @@ const starMaterial = new THREE.ShaderMaterial({
     void main() {
       float radius = length(gl_PointCoord * 2.0 - 1.0);
       float halo = exp(-radius * radius * 5.5) * 0.22;
-      float core = 1.0 - smoothstep(0.0, 0.22, radius);
       if(radius>=1.0) discard;
-      float alpha = (halo*1.5 + exp(-12.0*radius*radius)) * (0.24 + 0.76 * vBrightness);
+      float softEdge = 1.0 - smoothstep(0.68, 1.0, radius);
+      float alpha = (halo*1.5 + exp(-12.0*radius*radius)) * softEdge * (0.24 + 0.76 * vBrightness);
       vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.76, 0.58), smoothstep(-0.32,1.65,colorIndex));
       gl_FragColor = vec4(tint, alpha);
     }
@@ -218,7 +218,6 @@ const horizonGround=new THREE.Mesh(new THREE.SphereGeometry(earthSkyRadius*.9,96
   side:THREE.BackSide,depthTest:true,depthWrite:true
 }));
 horizonGround.renderOrder=-1;scene.add(horizonGround);
-const gridGroup=createHorizonGrid();scene.add(gridGroup);
 const constellationNameSprites=new THREE.Group();scene.add(constellationNameSprites);
 const celestialMarkers=[];
 const raycaster=new THREE.Raycaster();raycaster.params.Points.threshold=.75;const pointer=new THREE.Vector2();
@@ -226,10 +225,6 @@ let lastFrame=performance.now();
 
 function horizonVector(azimuth, altitude, radius = earthSkyRadius) {
   return new THREE.Vector3(...horizonCartesian(azimuth, altitude, radius));
-}
-function createHorizonGrid(){
-  const group=new THREE.Group();
-    const labels=[[0,'N'],[90,'E'],[180,'S'],[270,'W']];labels.forEach(([az,label])=>{const text=makeLabel(label);text.position.copy(horizonVector(az,1.6,earthSkyRadius*.9));group.add(text);});return group;
 }
 function makeLabel(text){const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;const ctx=canvas.getContext('2d');ctx.font='500 27px Manrope, Georgia, serif';ctx.fillStyle='rgba(218,231,246,.82)';ctx.shadowColor='rgba(3,9,21,.92)';ctx.shadowBlur=8;ctx.textAlign='center';ctx.fillText(text,128,42);const texture=new THREE.CanvasTexture(canvas);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));sprite.scale.set(12,3,1);return sprite;}
 function observerSky(date,ra,dec){return Astronomy.Horizon(date,observer,ra,dec,'normal');}
@@ -283,10 +278,45 @@ function calculateSky() {
   $('#datePicker').value=toLocalInput(observationDate);
   if (selectedStar && $('#skyInfo').classList.contains('open')) showStar(selectedStar, false);
 }
+// A generated alpha mask gives each body a round silhouette without an image request.
+const bodyGlowSize=64;
+const bodyGlowPixels=new Uint8Array(bodyGlowSize*bodyGlowSize*4);
+for(let y=0;y<bodyGlowSize;y++){
+  for(let x=0;x<bodyGlowSize;x++){
+    const radius=Math.hypot((2*x+1)/bodyGlowSize-1,(2*y+1)/bodyGlowSize-1);
+    const core=1-THREE.MathUtils.smoothstep(radius,.34,.66);
+    const halo=.23*(1-THREE.MathUtils.smoothstep(radius,.24,.99));
+    bodyGlowPixels.set([255,255,255,Math.round(255*Math.min(1,core+halo))],4*(y*bodyGlowSize+x));
+  }
+}
+const bodyGlow=new THREE.DataTexture(bodyGlowPixels,bodyGlowSize,bodyGlowSize);
+bodyGlow.magFilter=THREE.LinearFilter;
+bodyGlow.minFilter=THREE.LinearMipmapLinearFilter;
+bodyGlow.generateMipmaps=true;
+bodyGlow.needsUpdate=true;
+
 function updateSolarMarkers(){
-  celestialMarkers.forEach(item=>{item.sprite.removeFromParent();item.sprite.material.dispose();});celestialMarkers.length=0;
-  const bodies=[['Sun','Güneş','☼'],['Moon','Ay','●'],['Mercury','Merkür','·'],['Venus','Venüs','·'],['Mars','Mars','·'],['Jupiter','Jüpiter','·'],['Saturn','Satürn','·'],['Uranus','Uranüs','·'],['Neptune','Neptün','·']];
-  bodies.forEach(([body,name,glyph])=>{try{const eq=Astronomy.Equator(Astronomy.Body[body],observationDate,observer,true,true);const h=observerSky(observationDate,eq.ra,eq.dec);if(h.altitude<0)return;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({color:body==='Sun'?0xffce76:body==='Moon'?0xdce7ff:0x9deaf0,transparent:true,depthTest:false}));sprite.scale.set(body==='Sun'||body==='Moon'?4:2.5,body==='Sun'||body==='Moon'?4:2.5,1);sprite.position.copy(horizonVector(h.azimuth,h.altitude));sprite.userData.celestial={body,name,ra:eq.ra,dec:eq.dec,h};sprite.userData.pickable=true;scene.add(sprite);celestialMarkers.push({sprite});}catch{}});
+  for(const {sprite} of celestialMarkers){
+    sprite.removeFromParent();
+    sprite.material.dispose();
+  }
+  celestialMarkers.length=0;
+  for(const [body,name] of skyBodies){
+    const eq=Astronomy.Equator(Astronomy.Body[body],observationDate,observer,true,true);
+    const h=observerSky(observationDate,eq.ra,eq.dec);
+    if(h.altitude<0)continue;
+    const moonOrSun=body==='Sun'||body==='Moon';
+    const color=body==='Sun'?0xffce76:body==='Moon'?0xdce7ff:0x9deaf0;
+    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
+      map:bodyGlow,color,transparent:true,depthTest:false,depthWrite:false
+    }));
+    const size=moonOrSun?4:2.5;
+    sprite.scale.set(size,size,1);
+    sprite.position.copy(horizonVector(h.azimuth,h.altitude));
+    sprite.userData.celestial={body,name,ra:eq.ra,dec:eq.dec,h};
+    scene.add(sprite);
+    celestialMarkers.push({sprite});
+  }
 }
 function toLocalInput(date){const shift=date.getTimezoneOffset()*60000;return new Date(date.getTime()-shift).toISOString().slice(0,16);}
 function fromLocalInput(value){return new Date(value);}
@@ -533,7 +563,7 @@ listenForTap(renderer.domElement,event=>{
   } else {lastSkyTap=null;clearSelection();}
 });
 const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(!stellarView&&renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
-window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
+window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{if(m.map!==bodyGlow)m.map?.dispose();m.dispose();});}});bodyGlow.dispose();renderer.dispose();renderer.forceContextLoss();});
 ui.querySelector('[data-mode="sky"]').click();calculateSky();renderActive=true;
 const skyQuality=renderQuality($('#qualityToggle'),skyFps,(level,ratio)=>{
   lowQuality=level==='low';
