@@ -389,9 +389,11 @@ function animateFocus(id,rings=false){
   const position=mesh.getWorldPosition(new THREE.Vector3());
   const radius=worldRadius(mesh);
   const tangent=Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()/2));
+  // The projected disk can extend beyond the viewport in close inspection.
+  const diskFraction=['sun','jupiter','saturn','uranus','neptune'].includes(id)?1.10:1.06;
   const distance=rings
     ?framingDistance(radius*2.15,.64,tangent*Math.min(1,camera.aspect))
-    :framingDistance(radius,.80,tangent);
+    :framingDistance(radius,diskFraction,tangent);
   const direction=new THREE.Vector3();
   if(id==='sun')direction.copy(camera.position).sub(controls.target);
   else if(id==='moon')direction.copy(position).sub(getDisplayPosition('earth'));
