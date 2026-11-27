@@ -219,7 +219,7 @@ const horizonGround=new THREE.Mesh(new THREE.SphereGeometry(earthSkyRadius*.9,96
 }));
 horizonGround.renderOrder=-1;scene.add(horizonGround);
 const constellationNameSprites=new THREE.Group();scene.add(constellationNameSprites);
-const celestialMarkers=[];
+const celestialTargets=[];
 const raycaster=new THREE.Raycaster();raycaster.params.Points.threshold=.75;const pointer=new THREE.Vector2();
 let lastFrame=performance.now();
 
@@ -272,51 +272,40 @@ function calculateSky() {
       constellationNameSprites.add(label);
     }
   }
-  updateSolarMarkers();
+  updateCelestialTargets();
   $('#starCount').textContent=visibleCount+' görünür';
   $('#skyDateLabel').textContent=new Intl.DateTimeFormat('tr-TR',{dateStyle:'medium',timeStyle:'medium'}).format(observationDate);
   $('#datePicker').value=toLocalInput(observationDate);
   if (selectedStar && $('#skyInfo').classList.contains('open')) showStar(selectedStar, false);
 }
-// A generated alpha mask gives each body a round silhouette without an image request.
-const bodyGlowSize=64;
-const bodyGlowPixels=new Uint8Array(bodyGlowSize*bodyGlowSize*4);
-for(let y=0;y<bodyGlowSize;y++){
-  for(let x=0;x<bodyGlowSize;x++){
-    const radius=Math.hypot((2*x+1)/bodyGlowSize-1,(2*y+1)/bodyGlowSize-1);
-    const core=1-THREE.MathUtils.smoothstep(radius,.34,.66);
-    const halo=.23*(1-THREE.MathUtils.smoothstep(radius,.24,.99));
-    bodyGlowPixels.set([255,255,255,Math.round(255*Math.min(1,core+halo))],4*(y*bodyGlowSize+x));
-  }
-}
-const bodyGlow=new THREE.DataTexture(bodyGlowPixels,bodyGlowSize,bodyGlowSize);
-bodyGlow.magFilter=THREE.LinearFilter;
-bodyGlow.minFilter=THREE.LinearMipmapLinearFilter;
-bodyGlow.generateMipmaps=true;
-bodyGlow.needsUpdate=true;
-
-function updateSolarMarkers(){
-  for(const {sprite} of celestialMarkers){
-    sprite.removeFromParent();
-    sprite.material.dispose();
-  }
-  celestialMarkers.length=0;
+// Unselected Solar System bodies are hit targets only. They do not add drawables to the sky.
+function updateCelestialTargets(){
+  celestialTargets.length=0;
   for(const [body,name] of skyBodies){
     const eq=Astronomy.Equator(Astronomy.Body[body],observationDate,observer,true,true);
     const h=observerSky(observationDate,eq.ra,eq.dec);
     if(h.altitude<0)continue;
-    const moonOrSun=body==='Sun'||body==='Moon';
-    const color=body==='Sun'?0xffce76:body==='Moon'?0xdce7ff:0x9deaf0;
-    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-      map:bodyGlow,color,transparent:true,depthTest:false,depthWrite:false
-    }));
-    const size=moonOrSun?4:2.5;
-    sprite.scale.set(size,size,1);
-    sprite.position.copy(horizonVector(h.azimuth,h.altitude));
-    sprite.userData.celestial={body,name,ra:eq.ra,dec:eq.dec,h};
-    scene.add(sprite);
-    celestialMarkers.push({sprite});
+    celestialTargets.push({body,name,ra:eq.ra,dec:eq.dec,h,position:horizonVector(h.azimuth,h.altitude)});
   }
+}
+
+const celestialProjection=new THREE.Vector3();
+function pickCelestialTarget(rect,pointer,touch){
+  let nearest=null;
+  let bestDistance=touch?13:7;
+  for(const target of celestialTargets){
+    celestialProjection.copy(target.position).project(camera);
+    if(celestialProjection.z<-1 || celestialProjection.z>1)continue;
+    const distance=Math.hypot(
+      (celestialProjection.x-pointer.x)*rect.width/2,
+      (celestialProjection.y-pointer.y)*rect.height/2
+    );
+    if(distance<bestDistance){
+      nearest=target;
+      bestDistance=distance;
+    }
+  }
+  return nearest;
 }
 function toLocalInput(date){const shift=date.getTimezoneOffset()*60000;return new Date(date.getTime()-shift).toISOString().slice(0,16);}
 function fromLocalInput(value){return new Date(value);}
@@ -550,20 +539,20 @@ listenForTap(renderer.domElement,event=>{
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
   raycaster.setFromCamera(pointer, camera);
-  const [bodyHit] = raycaster.intersectObjects(celestialMarkers.map(({sprite}) => sprite), false);
   raycaster.params.Points.threshold=2*earthSkyRadius*Math.tan(camera.fov*Math.PI/360)*(event.pointerType==='touch'?13:6)/rect.height;
   const starHit = raycaster.intersectObject(points, false)
     .filter(({index}) => pointPositions[index * 3 + 1] >= 0)
     .sort((a, b) => a.distanceToRay - b.distanceToRay)[0];
-  // Visible planet sprites sit above the catalog layer and take precedence on a direct hit.
-  if (bodyHit) {
-    activateSkyTarget(bodyHit.object.userData.celestial);
-  } else if (starHit) {
+  if(starHit){
     activateSkyTarget(objectList[starHit.index]);
-  } else {lastSkyTap=null;clearSelection();}
+    return;
+  }
+  const target=pickCelestialTarget(rect,pointer,event.pointerType==='touch');
+  if(target)activateSkyTarget(target);
+  else {lastSkyTap=null;clearSelection();}
 });
 const frame=now=>{const delta=Math.min((now-lastFrame)/1000,1);lastFrame=now;updateSkyCamera(now,delta);if(timePlaying){const next=new Date(observationDate.getTime()+delta*Number($('#timeSpeed').value)*timeDirection*1000);if(next.getFullYear()<1800||next.getFullYear()>2100){observationDate=new Date(next.getFullYear()<1800?1800:2100,next.getFullYear()<1800?0:11,next.getFullYear()<1800?1:31,next.getFullYear()<1800?0:23,next.getFullYear()<1800?0:59);timePlaying=false;$('#timePlay').textContent='▶';showToast('Doğrulanmış tarih aralığının sınırına ulaşıldı (1800–2100).');calculateSky();}else observationDate=next;if(now-calculationStamp>1000){calculateSky();calculationStamp=now;}}if(!stellarView&&renderActive&&!document.hidden&&!renderer.domElement.classList.contains("mode-hidden")){starMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();renderer.render(scene,camera);placeMarker();skyQuality.frame(now);}};
-window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{if(m.map!==bodyGlow)m.map?.dispose();m.dispose();});}});bodyGlow.dispose();renderer.dispose();renderer.forceContextLoss();});
+window.addEventListener('pagehide',event=>{if(event.persisted)return;stopSky();window.removeEventListener("resize",resizeSky);disableSensor();controls.dispose();scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){(Array.isArray(obj.material)?obj.material:[obj.material]).forEach(m=>{m.map?.dispose();m.dispose();});}});renderer.dispose();renderer.forceContextLoss();});
 ui.querySelector('[data-mode="sky"]').click();calculateSky();renderActive=true;
 const skyQuality=renderQuality($('#qualityToggle'),skyFps,(level,ratio)=>{
   lowQuality=level==='low';
