@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030711">
+  <meta name="description" content="COSMORA: Güneş Sistemi'ni 3D olarak keşfet, gezegenleri incele ve simülasyon hızını değiştir.">
+  <title>COSMORA — 3D Güneş Sistemi | NEXORA</title>
+  <link rel="icon" href="../assets/nexora-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="cosmora.css?v=02g"><link rel="stylesheet" href="mobile-controls.css?v=02g-4">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
+  </script>
+  <script>
+    const fallbackReasons = {
+      file: ['Yerel web sunucusu gerekli','COSMORA modülleri dosya adresinden açılamıyor. NEXORA ana sayfasına dönebilirsin.'],
+      webgl: ['WebGL kullanılamıyor','3D sahne açılamadı. NEXORA ana sayfasına dön veya WebGL destekleyen bir tarayıcıda yeniden aç.'],
+      context: ['3D bağlantısı kesildi','Tarayıcı 3D bağlamını geri yükleyene kadar çizim durdu. Sorun sürerse sayfayı yenile.'],
+      astronomy: ['Astronomi kütüphanesi yüklenemedi','Gökyüzü hesaplamaları kullanılamıyor. Güneş Sistemi yüklenmişse çalışmaya devam eder.'],
+      module: ['COSMORA modülü yüklenemedi','Three.js bağlantısı veya bir sahne modülü yüklenemedi. Sayfayı yenileyebilir veya NEXORA ana sayfasına dönebilirsin.']
+    };
+    let fallbackReason, pendingReason;
+    function cosmoraModuleFallback(reason='module') {
+      if(location.protocol==='file:')reason='file';
+      if(fallbackReason&&reason==='module')return;
+      const panel=document.getElementById('fallback');
+      if(!panel){pendingReason=reason;return;}
+      fallbackReason=reason;
+      const [title,detail]=fallbackReasons[reason]??fallbackReasons.module;
+      document.getElementById('loading')?.classList.add('hidden');
+      panel.querySelector('h2').textContent=title;
+      panel.querySelector('p').textContent=detail;
+      panel.hidden=false;
+    }
+    function cosmoraClearFallback(reason) {
+      if(fallbackReason===reason){document.getElementById('fallback').hidden=true;fallbackReason=null;}
+    }
+    document.addEventListener('DOMContentLoaded',()=>{if(pendingReason)cosmoraModuleFallback(pendingReason);});
+    window.addEventListener('error', event => {
+      if(event.target instanceof HTMLScriptElement&&event.target.type==='module')cosmoraModuleFallback();
+      else if(event.error&&/WebGL/i.test(event.message))cosmoraModuleFallback('webgl');
+    },true);
+    window.addEventListener('unhandledrejection',()=>cosmoraModuleFallback());
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" onerror="cosmoraModuleFallback('astronomy')"></script>
+  <script type="module" src="cosmora.js?v=02g-4"></script>
+  <script type="module" src="cosmora-astronomy.js?v=02g-5"></script>
+  <script type="module" src="cosmora-deepspace.js?v=02g-5"></script>
+  <link rel="stylesheet" href="astronomy.css?v=02g">
+  <link rel="stylesheet" href="deepspace.css?v=02g-2">
+  <link rel="stylesheet" href="flight.css?v=02g-4">
+  <link rel="stylesheet" href="mobile-polish.css?v=02g-4">
+</head>
+<body>
+  <main class="simulator" id="simulator">
+    <div class="space" id="space" aria-label="Etkileşimli 3D Güneş Sistemi"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="back-link" href="../index.html" aria-label="NEXORA ana sayfasına dön"><span>←</span><span class="back-label">NEXORA</span></a>
+      <a class="cosmora-brand" href="#simulator"><span class="brand-orbit"><i></i></span><span><b>COSMORA</b><small>GÜNEŞ SİSTEMİ SİMÜLATÖRÜ</small></span></a>
+      <div class="top-status"><span class="live-dot"></span><span>CANLI SİMÜLASYON</span><span class="top-divider"></span><span id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro" aria-label="Simülasyon bilgisi">
+      <p class="eyebrow">NEXORA EVRENİ <span>/</span> COSMORA</p>
+      <h1>Güneş Sistemi</h1>
+      <p>Bir gezegen seç. Yaklaş, izle, merak et.</p>
+    </section>
+
+    <div class="scale-note"><span class="scale-icon">◎</span><span>GÖRSEL ÖLÇEK AYARLANDI</span><button id="scaleInfo" type="button" aria-label="Ölçek bilgisi">i</button></div>
+
+    <aside class="planet-panel glass" aria-label="Gezegen seçimi">
+      <div class="panel-heading"><span class="eyebrow">SİSTEMDEKİ CİSİMLER</span><span class="count-pill">09</span></div>
+      <button class="body-row active" type="button" data-body="sun"><span class="body-dot sun-dot"></span><span>Güneş</span><small>YILDIZ</small></button>
+      <button class="body-row" type="button" data-body="mercury"><span class="body-dot mercury-dot"></span><span>Merkür</span><small>01</small></button>
+      <button class="body-row" type="button" data-body="venus"><span class="body-dot venus-dot"></span><span>Venüs</span><small>02</small></button>
+      <button class="body-row" type="button" data-body="earth"><span class="body-dot earth-dot"></span><span>Dünya</span><small>03</small></button>
+      <button class="body-row" type="button" data-body="mars"><span class="body-dot mars-dot"></span><span>Mars</span><small>04</small></button>
+      <button class="body-row" type="button" data-body="jupiter"><span class="body-dot jupiter-dot"></span><span>Jüpiter</span><small>05</small></button>
+      <button class="body-row" type="button" data-body="saturn"><span class="body-dot saturn-dot"></span><span>Satürn</span><small>06</small></button>
+      <button class="body-row" type="button" data-body="uranus"><span class="body-dot uranus-dot"></span><span>Uranüs</span><small>07</small></button>
+      <button class="body-row" type="button" data-body="neptune"><span class="body-dot neptune-dot"></span><span>Neptün</span><small>08</small></button>
+      <div class="panel-hint"><span class="hint-cursor">⌖</span> İncelemek için bir gezegen seç</div>
+    </aside>
+
+    <aside class="info-panel glass" id="infoPanel" aria-live="polite" aria-label="Seçili gök cismi bilgileri">
+      <div class="info-top"><span class="eyebrow" id="bodyType">MERKEZ YILDIZ</span><button class="icon-button close-info" id="closeInfo" type="button" aria-label="Bilgi panelini kapat">×</button></div>
+      <h2 id="bodyName">Güneş</h2>
+      <p class="body-summary" id="bodyDescription">Sistemin merkezindeki yıldız. Işığı ve kütleçekimi, gezegenlerin yolculuğunu şekillendirir.</p>
+      <div class="fact-grid">
+        <div class="fact"><span>ÇAP</span><b id="diameter">1.392.700 km</b></div>
+        <div class="fact"><span>KÜTLE</span><b id="mass">1,989 × 10³⁰ kg</b></div>
+        <div class="fact"><span>GÜNEŞ'E ORT. UZAKLIK</span><b id="distance">—</b></div>
+        <div class="fact"><span>YÖRÜNGE SÜRESİ</span><b id="year">—</b></div>
+        <div class="fact"><span>DÖNÜŞ SÜRESİ</span><b id="day">≈ 25 gün (ekvator)</b></div>
+        <div class="fact"><span>ORT. SICAKLIK</span><b id="temperature">≈ 5.500 °C*</b></div>
+        <div class="fact"><span>YER ÇEKİMİ</span><b id="gravity">274 m/s²</b></div>
+        <div class="fact"><span>UYDULAR</span><b id="moons">Gezegenleri etkiler</b></div>
+      </div>
+      <div class="panel-foot"><span class="info-marker">i</span><span id="factFoot">Güneş bir gezegen değildir; yıldız olarak modellenmiştir.</span></div>
+    </aside>
+
+    <div class="scene-tools" aria-label="Kamera araçları">
+      <button class="icon-button" id="overviewBtn" type="button" title="Genel bakış" aria-label="Genel bakışa dön">⌂</button>
+      <button class="icon-button" id="followBtn" type="button" title="Takibi aç veya kapat" aria-label="Gezegen takibini aç veya kapat">⌖</button>
+      <button class="icon-button" id="fullscreenBtn" type="button" title="Tam ekran" aria-label="Tam ekranı aç">⛶</button>
+    </div>
+
+    <section class="control-dock glass" aria-label="Simülasyon kontrolleri">
+      <div class="play-controls">
+        <button class="play-button" id="playBtn" type="button" aria-label="Simülasyonu duraklat" title="Başlat / duraklat"><span id="playGlyph">Ⅱ</span></button>
+        <div class="speed-readout"><small>ZAMAN HIZI</small><strong id="speedReadout">1.0×</strong></div>
+        <button class="step-button" id="slowerBtn" type="button" aria-label="Zamanı yavaşlat">−</button>
+        <input id="speedRange" class="speed-range" type="range" min="0" max="5" step="1" value="2" aria-label="Zaman hızı">
+        <button class="step-button" id="fasterBtn" type="button" aria-label="Zamanı hızlandır">+</button>
+      </div>
+      <div class="dock-divider"></div>
+      <label class="scale-control"><span>YÖRÜNGE ARALIĞI</span><input id="distanceRange" type="range" min="0.65" max="1.65" step="0.05" value="1"><b id="distanceValue">1.00×</b></label>
+      <label class="scale-control size-control"><span>GEZEGEN BOYUTU</span><input id="sizeRange" type="range" min="0.7" max="2.2" step="0.1" value="1"><b id="sizeValue">1.0×</b></label>
+      <div class="dock-divider second-divider"></div>
+      <div class="toggle-controls">
+        <label class="switch-label"><input id="orbitsToggle" type="checkbox" checked><span class="switch"></span><span>Yörüngeler</span></label>
+        <label class="switch-label"><input id="labelsToggle" type="checkbox" checked><span class="switch"></span><span>İsimler</span></label>
+      </div>
+      <div class="dock-actions">
+        <button class="text-button" id="cinemaBtn" type="button" title="Sinematik görünümü aç">◉ <span>SİNEMATİK</span></button>
+        <label class="text-button">Grafik <select id="qualityBtn" aria-label="Güneş Sistemi grafik kalitesi"></select></label>
+        <button class="reset-button" id="resetBtn" type="button" title="Ayarları sıfırla">↻ SIFIRLA</button>
+      </div>
+    </section>
+
+    <div class="camera-hint"><span>SÜRÜKLE</span> döndür <i></i><span>TEKERLEK</span> yakınlaş <i></i><span>W A S D</span> hareket</div>
+    <div class="loading" id="loading"><span class="loader-orbit"><i></i></span><b>COSMORA</b><span>GÜNEŞ SİSTEMİ HAZIRLANIYOR</span></div>
+    <div class="fallback glass" id="fallback" role="alert" hidden><span class="fallback-icon">◉</span><h2>3D görünüm bu cihazda açılamadı</h2><p>Tarayıcıda WebGL desteği kapalı veya kullanılamıyor. WebGL destekleyen güncel bir tarayıcıda yeniden deneyebilir ya da simülatörün kontrol panelini kullanabilirsin.</p><a href="../index.html">NEXORA ana sayfasına dön</a><button type="button" onclick="location.reload()">Yenile</button><button type="button" onclick="this.parentElement.hidden=true">Kapat</button></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="mobile-body-picker"><label for="mobileBody">GÖK CİSMİ SEÇ</label><select id="mobileBody"><option value="sun">Güneş</option><option value="mercury">Merkür</option><option value="venus">Venüs</option><option value="earth">Dünya</option><option value="mars">Mars</option><option value="jupiter">Jüpiter</option><option value="saturn">Satürn</option><option value="uranus">Uranüs</option><option value="neptune">Neptün</option></select></div>
+    <footer class="sim-footer"><span>NEXORA <i>·</i> COSMORA</span><span>MODEL: GÖRSELLEŞTİRİLMİŞ ÖLÇEK <i>·</i> BİLİMSEL VERİLER KAYNAKLI</span></footer>
+
+    <dialog class="notice-dialog glass" id="noticeDialog"><button class="icon-button notice-close" type="button" aria-label="Kapat">×</button><p class="eyebrow">MODEL HAKKINDA</p><h2>Bir keşif modeli</h2><p>Güneş Sistemi modunda gezegen çapları ve uzaklıkları görünürlük için ayrı görsel ölçeklerde gösterilir; yörüngeler yaklaşık daireseldir ve bu mod efemeris değildir. Gökyüzü modunda seçili tarih ve konum için yıldızların ufuk koordinatları ile Güneş, Ay ve gezegen konumları Astronomy Engine ile hesaplanır. Yıldız kataloğundaki koordinatlar J2000 dönemindedir.</p><p>Gökyüzü zaman akışı seçili tarihi ileri veya geri taşır. Sonuçlar profesyonel gözlem yazılımının yerine geçmez; yıldız özdevinimi, yerel arazi ufku ve ışık kirliliği modellenmez. Görsel ölçek ve bilimsel hesaplama kipleri bu nedenle ayrı tutulmuştur.</p></dialog>
+  </main>
+  <script>
+    const cinemaShell=document.querySelector('.simulator');
+    const cinemaExit=document.createElement('button');
+    cinemaExit.type='button';cinemaExit.className='cinema-exit';cinemaExit.textContent='Sinematikten çık';cinemaExit.hidden=true;
+    cinemaShell.append(cinemaExit);
+    const syncCinema=()=>{cinemaExit.hidden=!(cinemaShell.classList.contains('cinematic')||
+      document.querySelector('#deepSpace.visible.cinematic-deep'));};
+    const cinemaObserver=new MutationObserver(syncCinema);
+    cinemaObserver.observe(cinemaShell,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    cinemaExit.onclick=()=>{
+      (document.querySelector('#deepSpace.visible.cinematic-deep #cinematicTravel')||document.getElementById('cinemaBtn'))?.click();
+    };
+    window.addEventListener('pagehide',event=>{if(!event.persisted)cinemaObserver.disconnect();});
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+.cosmora-fps{position:absolute;z-index:5;right:12px;bottom:12px;color:#a8bdcf;background:#06101dbd;border:1px solid #8ea7bd35;border-radius:3px;padding:5px 7px;font:8px var(--mono,monospace);letter-spacing:.04em;pointer-events:none}
+.simulator{overscroll-behavior:contain}.mobile-panel-toggle{display:none}
+@media(max-width:760px){
+.mobile-panel-toggle{display:block;position:absolute;z-index:7;top:108px;right:8px;border:1px solid #9bd6dc60;border-radius:4px;background:#071322e8;color:#d8f0f2;padding:7px 9px;font:8px var(--mono,monospace);touch-action:manipulation}
+.simulator:not(.mobile-panels-open) .planet-panel,.simulator:not(.mobile-panels-open) .info-panel,.simulator:not(.mobile-panels-open) .control-dock,.simulator:not(.mobile-panels-open) .mobile-body-picker,.simulator:not(.mobile-panels-open) #skyLeft,.simulator:not(.mobile-panels-open) #skyInfo,.simulator:not(.mobile-panels-open) .time-dock,.simulator:not(.mobile-panels-open) #deepSpace .deep-tools,.simulator:not(.mobile-panels-open) #deepSpace .deep-card,.simulator:not(.mobile-panels-open) #deepSpace .travel-dock{display:none!important}
+.cosmora-fps{right:8px;bottom:8px;font-size:7px}}
+#orientationToggle,#orientationCalibrate{border:1px solid rgba(150,205,221,.32);border-radius:3px;background:#081626;color:#c3e4ef;padding:5px 7px;font-size:8px;cursor:pointer;pointer-events:auto}#orientationToggle[aria-pressed="true"]{border-color:#eb7c87;color:#ffbbc1}#orientationCalibrate:disabled{opacity:.45;cursor:not-allowed}

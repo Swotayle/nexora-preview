@@ -1,0 +1,41 @@
+.flight-hud {
+  position: absolute;
+  top: clamp(5.5rem, 12vh, 8rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: .3rem .65rem;
+  width: min(45rem, calc(100% - 2rem));
+  color: #e1f5ff;
+  font-size: .75rem;
+  pointer-events: none;
+}
+.flight-hud[hidden] { display: none; }
+.flight-hud > * { pointer-events: auto; }
+.flight-hud output, .flight-hud details, .flight-hud > label, .flight-hud > button {
+  padding: .35rem .55rem;
+  border: 1px solid #3b607c;
+  border-radius: .45rem;
+  background: #071321e8;
+  color: inherit;
+}
+.flight-hud output { flex: 0 1 auto; text-align: center; }
+.flight-hud progress { width: min(12rem, 40vw); accent-color: #7ee5ff; }
+.flight-hud input { width: 5rem; vertical-align: middle; }
+.flight-hud summary { cursor: pointer; }
+.flight-hud details[open] small { display: block; max-width: 24rem; padding-top: .3rem; }
+.flight-touch { display: none; }
+.flight-touch[open] div { display: flex; flex-wrap: wrap; gap: .25rem; padding-top: .35rem; }
+.flight-touch button { min-width: 2.4rem; min-height: 2.4rem; border: 1px solid #476b82; border-radius: .3rem; color: inherit; background: #13263b; touch-action: none; }
+#deepSpace.cinematic-deep .flight-hud, #simulator.cinematic .solar-flight { visibility: hidden; }
+@media (pointer: coarse), (max-width: 760px) {
+  .flight-touch { display: block; }
+  .flight-hud { width: calc(100% - 1rem); font-size: .68rem; }
+  .flight-help { display: none; }
+  #deepSpace .travel-actions { max-height: 6rem; overflow: auto; }
+}
+

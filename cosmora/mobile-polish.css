@@ -1,0 +1,60 @@
+.simulator canvas { touch-action: none; }
+.simulator :is(button,select,input,summary,a):focus-visible {
+  outline: 2px solid #9afdff;
+  outline-offset: 3px;
+}
+.simulator select { color: #eeffff; background: #091b2c; }
+.cinema-exit {
+  position: absolute;
+  top: max(5rem, calc(env(safe-area-inset-top) + 4rem));
+  right: max(.75rem, env(safe-area-inset-right));
+  z-index: 15;
+  min-height: 44px;
+  padding: .4rem .75rem;
+  color: #efffff;
+  background: #081a2a;
+  border: 1px solid #75b4c7;
+  border-radius: .5rem;
+}
+.cinema-exit[hidden] { display: none; }
+@media (max-width: 760px), (max-height: 530px) and (pointer: coarse) {
+  .mobile-panel-toggle {
+    display: block;
+    top: auto;
+    bottom: max(.6rem, env(safe-area-inset-bottom));
+    right: max(.65rem, env(safe-area-inset-right));
+    min-height: 44px;
+    padding: .5rem .75rem;
+    font-size: .72rem;
+  }
+  .simulator .mode-bar {
+    padding-inline: max(.4rem, env(safe-area-inset-left)) max(.4rem, env(safe-area-inset-right));
+  }
+  .simulator :is(.mode-choice,.sky-result,.deep-row,.travel-actions button,#orientationToggle,#orientationCalibrate,.flight-touch summary) {
+    min-height: 44px;
+  }
+  .simulator :is(.planet-panel,.info-panel,.sky-left,.sky-info,.deep-tools,.deep-card) {
+    max-height: min(36dvh, 19rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    animation: controls-enter 150ms ease-out;
+  }
+  .simulator.mobile-panels-open :is(.travel-dock,.control-dock,.time-dock) {
+    bottom: calc(max(.6rem, env(safe-area-inset-bottom)) + 3.1rem);
+    max-height: 27dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .flight-hud { top: max(5rem, calc(env(safe-area-inset-top) + 3.5rem)); }
+  .flight-hud output { max-width: 95%; overflow-wrap: anywhere; }
+  .flight-touch button { min-width: 44px; min-height: 44px; }
+}
+@keyframes controls-enter { from { opacity: .45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .simulator *, .simulator *::before, .simulator *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
