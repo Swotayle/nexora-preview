@@ -515,7 +515,8 @@ listenForTap(renderer.domElement,event=>{
   const starHit = raycaster.intersectObject(points, false)
     .filter(({index}) => pointPositions[index * 3 + 1] >= 0)
     .sort((a, b) => a.distanceToRay - b.distanceToRay)[0];
-  if (bodyHit && (!starHit || bodyHit.distance <= starHit.distance)) {
+  // Visible planet sprites sit above the catalog layer and take precedence on a direct hit.
+  if (bodyHit) {
     activateSkyTarget(bodyHit.object.userData.celestial);
   } else if (starHit) {
     activateSkyTarget(objectList[starHit.index]);

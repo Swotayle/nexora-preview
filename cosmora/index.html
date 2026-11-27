@@ -44,14 +44,14 @@
     window.addEventListener('unhandledrejection',()=>cosmoraModuleFallback());
   </script>
   <script src="./vendor/astronomy-engine/astronomy.browser.min.js" onerror="cosmoraModuleFallback('astronomy')"></script>
-  <script type="module" src="cosmora.js?v=02g-17"></script>
-  <script type="module" src="cosmora-astronomy.js?v=02g-17"></script>
-  <script type="module" src="cosmora-deepspace.js?v=02g-17"></script>
+  <script type="module" src="cosmora.js?v=02g-18a"></script>
+  <script type="module" src="cosmora-astronomy.js?v=02g-18a"></script>
+  <script type="module" src="cosmora-deepspace.js?v=02g-18a"></script>
   <link rel="stylesheet" href="astronomy.css?v=02g">
   <link rel="stylesheet" href="deepspace.css?v=02g-2">
   <link rel="stylesheet" href="flight.css?v=02g-4">
   <link rel="stylesheet" href="mobile-polish.css?v=02g-4">
-<link rel="stylesheet" href="experience.css?v=02g-17"></head>
+<link rel="stylesheet" href="experience.css?v=02g-18a"></head>
 <body>
   <main class="simulator" id="simulator"><details class="advanced"><summary>Ayarlar</summary><label><input id="diagnostics" type="checkbox"> Performans göstergeleri</label><label><input id="venusRadar" type="checkbox"> Venüs radar yüzeyi</label><small>Gezegen haritaları: <a href="https://www.solarsystemscope.com/textures/">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><br>Venüs radarı: NASA/JPL-Caltech<br>Samanyolu: ESO/S. Brunier</small></details>
     <div class="space" id="space" aria-label="Etkileşimli 3D Güneş Sistemi"></div>
@@ -77,6 +77,7 @@
       <button class="body-row" type="button" data-body="mercury"><span class="body-dot mercury-dot"></span><span>Merkür</span><small>01</small></button>
       <button class="body-row" type="button" data-body="venus"><span class="body-dot venus-dot"></span><span>Venüs</span><small>02</small></button>
       <button class="body-row" type="button" data-body="earth"><span class="body-dot earth-dot"></span><span>Dünya</span><small>03</small></button>
+      <button class="body-row" type="button" data-body="moon"><span class="body-dot"></span><span>Ay</span><small>UYDU</small></button>
       <button class="body-row" type="button" data-body="mars"><span class="body-dot mars-dot"></span><span>Mars</span><small>04</small></button>
       <button class="body-row" type="button" data-body="jupiter"><span class="body-dot jupiter-dot"></span><span>Jüpiter</span><small>05</small></button>
       <button class="body-row" type="button" data-body="saturn"><span class="body-dot saturn-dot"></span><span>Satürn</span><small>06</small></button>
@@ -92,7 +93,7 @@
       <div class="fact-grid">
         <div class="fact"><span>ÇAP</span><b id="diameter">1.392.700 km</b></div>
         <div class="fact"><span>KÜTLE</span><b id="mass">1,989 × 10³⁰ kg</b></div>
-        <div class="fact"><span>GÜNEŞ'E ORT. UZAKLIK</span><b id="distance">—</b></div>
+        <div class="fact"><span id="distanceLabel">GÜNEŞ’E ORT. UZAKLIK</span><b id="distance">—</b></div>
         <div class="fact"><span>YÖRÜNGE SÜRESİ</span><b id="year">—</b></div>
         <div class="fact"><span>DÖNÜŞ SÜRESİ</span><b id="day">≈ 25 gün (ekvator)</b></div>
         <div class="fact"><span>ORT. SICAKLIK</span><b id="temperature">≈ 5.500 °C*</b></div>
@@ -100,10 +101,13 @@
         <div class="fact"><span>UYDULAR</span><b id="moons">Gezegenleri etkiler</b></div>
       </div>
       <div class="panel-foot"><span class="info-marker">i</span><span id="factFoot">Güneş bir gezegen değildir; yıldız olarak modellenmiştir.</span></div>
+      <div class="solar-framing"><button id="approachBody" type="button">Yaklaş</button><button id="frameRings" type="button" hidden>Halkaların tamamı</button></div>
     </aside>
 
     <div class="scene-tools" aria-label="Kamera araçları">
       <button class="icon-button" id="overviewBtn" type="button" title="Genel bakış" aria-label="Genel bakışa dön">⌂</button>
+      <button class="icon-button" id="zoomSolarIn" type="button" aria-label="Yakınlaştır">+</button>
+      <button class="icon-button" id="zoomSolarOut" type="button" aria-label="Uzaklaştır">−</button>
       <button class="icon-button" id="followBtn" type="button" title="Takibi aç veya kapat" aria-label="Gezegen takibini aç veya kapat">⌖</button>
       <button class="icon-button" id="fullscreenBtn" type="button" title="Tam ekran" aria-label="Tam ekranı aç">⛶</button>
     </div>
@@ -135,7 +139,7 @@
     <div class="loading" id="loading"><span class="loader-orbit"><i></i></span><b>COSMORA</b><span>GÜNEŞ SİSTEMİ HAZIRLANIYOR</span></div>
     <div class="fallback glass" id="fallback" role="alert" hidden><span class="fallback-icon">◉</span><h2>3D görünüm bu cihazda açılamadı</h2><p>Tarayıcıda WebGL desteği kapalı veya kullanılamıyor. WebGL destekleyen güncel bir tarayıcıda yeniden deneyebilir ya da simülatörün kontrol panelini kullanabilirsin.</p><a href="../index.html">NEXORA ana sayfasına dön</a><button type="button" onclick="location.reload()">Yenile</button><button type="button" onclick="this.parentElement.hidden=true">Kapat</button></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="mobile-body-picker"><label for="mobileBody">GÖK CİSMİ SEÇ</label><select id="mobileBody"><option value="sun">Güneş</option><option value="mercury">Merkür</option><option value="venus">Venüs</option><option value="earth">Dünya</option><option value="mars">Mars</option><option value="jupiter">Jüpiter</option><option value="saturn">Satürn</option><option value="uranus">Uranüs</option><option value="neptune">Neptün</option></select></div>
+    <div class="mobile-body-picker"><label for="mobileBody">GÖK CİSMİ SEÇ</label><select id="mobileBody"><option value="sun">Güneş</option><option value="mercury">Merkür</option><option value="venus">Venüs</option><option value="earth">Dünya</option><option value="moon">Ay</option><option value="mars">Mars</option><option value="jupiter">Jüpiter</option><option value="saturn">Satürn</option><option value="uranus">Uranüs</option><option value="neptune">Neptün</option></select></div>
     <footer class="sim-footer"><span>NEXORA <i>·</i> COSMORA</span><span>MODEL: GÖRSELLEŞTİRİLMİŞ ÖLÇEK <i>·</i> BİLİMSEL VERİLER KAYNAKLI</span></footer>
 
     <dialog class="notice-dialog glass" id="noticeDialog"><button class="icon-button notice-close" type="button" aria-label="Kapat">×</button><p class="eyebrow">MODEL HAKKINDA</p><h2>Bir keşif modeli</h2><p>Güneş Sistemi modunda gezegen çapları ve uzaklıkları görünürlük için ayrı görsel ölçeklerde gösterilir; yörüngeler yaklaşık daireseldir ve bu mod efemeris değildir. Gökyüzü modunda seçili tarih ve konum için yıldızların ufuk koordinatları ile Güneş, Ay ve gezegen konumları Astronomy Engine ile hesaplanır. Yıldız kataloğundaki koordinatlar J2000 dönemindedir.</p><p>Gökyüzü zaman akışı seçili tarihi ileri veya geri taşır. Sonuçlar profesyonel gözlem yazılımının yerine geçmez; yıldız özdevinimi, yerel arazi ufku ve ışık kirliliği modellenmez. Görsel ölçek ve bilimsel hesaplama kipleri bu nedenle ayrı tutulmuştur.</p></dialog>
