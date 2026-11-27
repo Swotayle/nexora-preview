@@ -1,12 +1,12 @@
 import { constellationLines } from './constellation-lines.mjs';
 import { constellationLabels } from './constellation-labels.mjs';
-import { celestialHours, constellationSegments } from './constellation-geometry.mjs';
+import { celestialHours, constellationSegments } from './constellation-geometry.mjs?v=02g-16';
 import { renderQuality, sceneLoop, listenForTap, qualityOptions, reducedMotion } from './runtime-ui.js';
 import { advanceJourney, createJourney, flightMode, integrateFlight, movementSpeed, resolveFlight, validPosition } from './flight.mjs';
 import { mountFlightHud } from './flight-hud.js';
 import { createDeepModel } from './deep-visuals.js';
 import { qualityProfile, minimumDistance, isDeepMode, planTravel } from './deep-math.mjs';
-import './cosmora-astronomy.js?v=02g-5';
+import './cosmora-astronomy.js?v=02g-16';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { brightStars } from './hipparcos-bright-stars.js';

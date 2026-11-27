@@ -13,7 +13,7 @@ export function makeJ2000Horizon(astronomy, date, observer) {
   return (ra, dec) => {
     const eqj=astronomy.VectorFromSphere(new astronomy.Spherical(dec,ra*15,1),date);
     const horizontal=astronomy.RotateVector(rotation,eqj);
-    const {lon:azimuth,lat:altitude}=astronomy.HorizonFromVector(horizontal,'normal');
+    const {lon:azimuth,lat:altitude}=astronomy.HorizonFromVector(horizontal);
     return {azimuth,altitude};
   };
 }
