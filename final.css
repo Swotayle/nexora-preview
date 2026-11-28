@@ -1,0 +1,20 @@
+@view-transition{navigation:auto}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:5px}
+.topbar{background:linear-gradient(90deg,#0f1429,#080b18 70%)}
+.hero{background:radial-gradient(ellipse at 75% 55%,#352d663d,transparent 53%),linear-gradient(135deg,#1722385c,transparent 48%)}
+.hero h1{font-weight:750}
+.hero h1 span{background:linear-gradient(96deg,#a1f8ee,#a4b6ff);background-clip:text;color:transparent;font-weight:680}
+.universe-grid{background:radial-gradient(circle,#2a477847 0,transparent 69%),radial-gradient(circle at 29% 41%,#afdbff 0 1px,transparent 1.5px),radial-gradient(circle at 66% 28%,#9eabfa 0 1px,transparent 1.4px)}
+.world-card{border-radius:1rem;overflow:hidden;position:relative;isolation:isolate;transition:transform .23s ease,border-color .23s ease}
+.world-card:hover,.world-card:focus-within{transform:translateY(-4px);border-color:var(--world-light)}
+.world-card .card-art:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse,var(--world-light),transparent 66%);opacity:.11;pointer-events:none}
+.card-cosmora{--world-light:#8ce5fb}.card-studora{--world-light:#b9a6ff}.card-chronova{--world-light:#ffce80}.card-pixelverse{--world-light:#f68eff}.card-neocity{--world-light:#8bf5ce}
+.world-card .card-link{color:var(--world-light)}
+.card-art>span{animation:artifact-drift 6s ease-in-out infinite;animation-play-state:paused}
+.world-card:hover .card-art>span,.world-card:focus-within .card-art>span{animation-play-state:running}
+.art-space .art-star,.art-study .study-orbit,.art-time .time-tick,.art-pixel .pixel-score,.art-city .city-road{animation-name:artifact-glow}
+.card-art>span:nth-child(2){animation-delay:-2s}
+@keyframes artifact-drift{50%{translate:0 -6px}}
+@keyframes artifact-glow{50%{opacity:.55}}
+::view-transition-old(root),::view-transition-new(root){animation-duration:170ms}
+@media(prefers-reduced-motion:reduce){.card-art>span,::view-transition-old(root),::view-transition-new(root){animation:none!important}.world-card:hover,.world-card:focus-within{transform:none}}

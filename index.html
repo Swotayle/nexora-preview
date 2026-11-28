@@ -12,15 +12,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=02g">
-  <script src="script.js?v=02g" defer></script>
+  <link rel="stylesheet" href="final.css?v=07"><script src="script.js?v=07" defer></script>
 </head>
 <body>
-  <aside class="local-run-notice" id="localRunNotice" role="status" hidden>
-    <span>Güvenlik nedeniyle COSMORA, dosyaya çift tıklayarak (file://) açıldığında 3D modüllerini yükleyemez.</span>
-    <strong>NEXORA klasöründeki <code>start-nexora.bat</code> dosyasını çalıştır; uygulama yerel web adresinde açılır.</strong>
-    <button type="button" id="closeLocalRunNotice" aria-label="Bilgiyi kapat">×</button>
-  </aside>
-  <div class="site-shell">
+<div class="site-shell">
     <header class="topbar">
       <a class="brand" href="#baslangic" aria-label="NEXORA ana sayfa">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -57,8 +52,8 @@
           <a class="planet planet-cosmora" href="./cosmora/index.html" aria-label="COSMORA 3D uzay simülatörünü aç"><span class="planet-ring"></span><span class="planet-name">COSMORA</span><span class="planet-caption">3D uzayı keşfet</span></a>
           <a class="planet planet-studora" href="./studora/index.html" aria-label="STUDORA dünyasını keşfet"><span class="planet-name">STUDORA</span><span class="planet-caption">öğrenmeye başla</span></a>
           <a class="planet planet-chronova" href="./chronova/index.html" aria-label="CHRONOVA dünyasını keşfet"><span class="planet-name">CHRONOVA</span><span class="planet-caption">zamanda yol al</span></a>
-          <a class="planet planet-pixelverse" href="#dunyalar" data-world="PIXELVERSE" aria-label="PIXELVERSE dünyasını keşfet"><span class="planet-name">PIXELVERSE</span><span class="planet-caption">oyuna katıl</span></a>
-          <a class="planet planet-neocity" href="#dunyalar" data-world="NEOCITY" aria-label="NEOCITY dünyasını keşfet"><span class="planet-name">NEOCITY</span><span class="planet-caption">geleceği tasarla</span></a>
+          <a class="planet planet-pixelverse" href="./pixelverse/" aria-label="PIXELVERSE dünyasını keşfet"><span class="planet-name">PIXELVERSE</span><span class="planet-caption">oyuna katıl</span></a>
+          <a class="planet planet-neocity" href="./neocity/" aria-label="NEOCITY dünyasını keşfet"><span class="planet-name">NEOCITY</span><span class="planet-caption">geleceği tasarla</span></a>
           <span class="star star-a">✦</span><span class="star star-b">✧</span><span class="star star-c">✦</span><span class="star star-d">·</span>
           <div class="orbit-caption"><span>01 — 05</span><span>KEŞFEDİLECEK DÜNYA</span></div>
         </div>
@@ -84,12 +79,12 @@
             <div class="card-content"><div class="card-kicker"><span>03</span><span class="card-tag">ZAMANDA YOLCULUK</span></div><h3>CHRONOVA</h3><p>Geçmişin izlerini sür, geleceğin ihtimallerini düşün.</p><a class="card-link" href="./chronova/index.html">CHRONOVA’yı aç <span>↗</span></a></div>
           </article>
           <article class="world-card card-pixelverse" data-world-card="PIXELVERSE">
-            <div class="card-art art-pixel"><span class="pixel-grid"></span><span class="pixel-cube">✦</span><span class="pixel-score">SCORE <b>0088</b></span></div>
-            <div class="card-content"><div class="card-kicker"><span>04</span><span class="card-tag">OYNA</span></div><h3>PIXELVERSE</h3><p>Kısa oyunlara katıl, reflekslerini ve merakını dene.</p><button class="card-link" type="button" data-open-world="PIXELVERSE">Dünyayı keşfet <span>↗</span></button></div>
+            <div class="card-art art-pixel"><span class="pixel-grid"></span><span class="pixel-cube">✦</span><span class="pixel-score"><b>ARCADE</b></span></div>
+            <div class="card-content"><div class="card-kicker"><span>04</span><span class="card-tag">OYNA</span></div><h3>PIXELVERSE</h3><p>Kısa oyunlara katıl, reflekslerini ve merakını dene.</p><a class="card-link" href="./pixelverse/">PIXELVERSE dünyasını aç <span>↗</span></a></div>
           </article>
           <article class="world-card card-neocity" data-world-card="NEOCITY">
             <div class="card-art art-city"><span class="city-sun"></span><span class="tower tower-one"></span><span class="tower tower-two"></span><span class="tower tower-three"></span><span class="city-road"></span></div>
-            <div class="card-content"><div class="card-kicker"><span>05</span><span class="card-tag">TASARLA</span></div><h3>NEOCITY</h3><p>Hayalindeki şehri kur, yarının yaşamına şekil ver.</p><button class="card-link" type="button" data-open-world="NEOCITY">Dünyayı keşfet <span>↗</span></button></div>
+            <div class="card-content"><div class="card-kicker"><span>05</span><span class="card-tag">TASARLA</span></div><h3>NEOCITY</h3><p>Hayalindeki şehri kur, yarının yaşamına şekil ver.</p><a class="card-link" href="./neocity/">NEOCITY dünyasını aç <span>↗</span></a></div>
           </article>
         </div>
       </section>
@@ -101,18 +96,8 @@
       </section>
     </main>
 
-    <footer class="footer"><a class="brand footer-brand" href="#baslangic"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span>NEXORA</span></a><p>Bir Evren. Beş Dünya.</p><span class="footer-copy">© 2026 NEXORA · MERAKIN İZİNDE</span></footer>
+    <footer class="footer"><a class="brand footer-brand" href="#baslangic"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span>NEXORA</span></a><p>Bir Evren. Beş Dünya.</p><span class="footer-copy">© 2026 NEXORA · <a href="https://github.com/Swotayle/nexora-preview/blob/main/LICENSES.md">Kaynaklar ve lisanslar</a></span></footer>
   </div>
 
-  <dialog class="world-dialog" aria-labelledby="dialog-title">
-    <button class="dialog-close" type="button" aria-label="Pencereyi kapat">×</button>
-    <p class="eyebrow" id="dialog-kicker">NEXORA EVRENİ / DÜNYA</p>
-    <div class="dialog-symbol" aria-hidden="true">✦</div>
-    <h2 id="dialog-title">COSMORA</h2>
-    <p id="dialog-description">Uzayın derinliklerini keşfetmeye hazır mısın?</p>
-    <div class="dialog-status"><span class="status-dot"></span> BU DÜNYA YAKINDA AÇILIYOR</div>
-    <button class="button button-primary dialog-done" type="button">Evrene dön <span>↗</span></button>
-  </dialog>
-  <div class="dialog-backdrop" hidden></div>
 </body>
 </html>
