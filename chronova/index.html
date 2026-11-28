@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>CHRONOVA — NEXORA Zaman Yolculuğu</title>
+<link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="chronova.css">
+<script src="history-data.js" defer></script><script src="chronova.js" defer></script>
+</head>
+<body>
+<header class="top"><a class="home" href="../index.html">← NEXORA</a><a class="brand" href="#main"><span aria-hidden="true">◷</span> CHRONOVA</a><nav aria-label="Arşiv"><a href="#eras">Dönemler</a><button id="openArchive">Kaydettiklerim</button></nav></header>
+<main id="main">
+<section class="machine" aria-labelledby="title">
+<div class="scene-image"><img id="periodImage" alt="" hidden><span id="sceneSymbol" aria-hidden="true"></span></div><div class="scene-shade"></div>
+<div class="scene-content"><div class="eyebrow">NEXORA · ZAMAN MAKİNESİ</div><h1 id="title">Geçmişi Keşfet.<br>Zamana Yolculuk Yap.</h1><div class="date-display" id="displayYear"></div><p class="location" id="displayEra"></p>
+<form class="jump" id="jumpForm"><label>Yıl<input id="year" name="year" type="number" min="1" max="4000000" step="1" required></label><label>Takvim<select id="calendar"><option value="BC">MÖ</option><option value="AD">MS</option></select></label><button class="primary">Zamana git <span aria-hidden="true">→</span></button></form><p id="jumpError" class="status" role="status"></p>
+</div><a id="imageCredit" class="credit" target="_blank" rel="noopener" hidden></a><small id="visualNote" class="credit" hidden>Temsili dönem simgesi</small>
+</section>
+<section class="timeline panel" aria-labelledby="timelineTitle">
+<header><div><span class="eyebrow">OLAYLAR ARASINDA</span><h2 id="timelineTitle">Zaman çizelgesi</h2></div><div class="arrows"><button id="previous" aria-label="Önceki olaya git">←</button><button id="next" aria-label="Sonraki olaya git">→</button></div></header>
+<label class="range-label" for="timeline">Kronolojik olay durağı</label><input id="timeline" type="range" min="0" value="0"><div class="range-labels"><span>Tarih öncesi</span><span>Antik çağlar</span><span>Yakın tarih</span><span>Günümüz</span></div>
+<div id="stops" class="stops"></div>
+</section>
+<div class="reading">
+<section class="panel event" aria-labelledby="eventTitle"><header><div><div class="eyebrow" id="eventContext">TARİHÎ OLAY</div><h2 id="eventTitle"></h2><p class="meta" id="eventMeta"></p></div><button id="favorite" aria-pressed="false">☆ Kaydet</button></header><p id="description"></p><h3>Neden önemli?</h3><p id="significance"></p><a id="eventSource" class="source" target="_blank" rel="noopener">Kaynak ↗</a></section>
+<section class="panel lookup" aria-labelledby="searchTitle"><h2 id="searchTitle">Tarihte bul</h2><label for="search">Olay, yer veya tarih</label><input id="search" type="search" placeholder="Örn. Malazgirt, MÖ 490, Apollo"><div id="results" aria-live="polite"></div></section>
+</div>
+<section class="eras" id="eras" aria-labelledby="eraTitle"><div class="eyebrow">KEŞİF ARŞİVİ</div><h2 id="eraTitle">Dönemler ve medeniyetler</h2><p>Dönem adları birbiriyle örtüşebilir. Kartlar, belirli coğrafya ve temalara odaklanır.</p><div id="eraGrid"></div></section>
+</main>
+<dialog id="detail" aria-labelledby="detailTitle"><header><h2 id="detailTitle"></h2><button id="closeDetail" aria-label="Pencereyi kapat">×</button></header><div id="detailBody"></div></dialog>
+<footer><a href="../index.html">← NEXORA’ya dön</a><span>CHRONOVA · Favoriler ve ziyaretler bu tarayıcıda saklanır</span></footer>
+</body></html>
