@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>NEOCITY — NEXORA</title><link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="../worlds.css"><link rel="stylesheet" href="city.css"><script type="importmap">{"imports":{"three":"../cosmora/vendor/three/build/three.module.js"}}</script><script type="module" src="city.js"></script></head>
+<body class="city"><header class="world-header"><a href="../">← NEXORA</a><strong>NEOCITY</strong><a href="#yonetim">Yönetim ↓</a></header><main>
+<section class="intro"><p class="kicker">NEXORA / ŞEHİR SİMÜLASYONU</p><h1>NEO<span>CITY</span></h1><p>Geleceğin şehrini sokak sokak kur. Bütçeyi, nüfusu ve doğal kaynakları dengede tut.</p></section>
+<div class="city-layout">
+<section class="panel view-panel" aria-label="Üç boyutlu şehir">
+<div class="actions view-tools"><button id="overview" aria-pressed="true">Kuş bakışı</button><button id="street" aria-pressed="false">Sokak</button><button id="lightMode">Işık · Otomatik</button><label>Grafik <select id="quality"><option value="low">Düşük</option><option value="medium" selected>Orta</option><option value="high">Yüksek</option></select></label></div>
+<div id="viewport" tabindex="0" aria-label="3B şehir. Sürükleyerek bak, arsayı tıklayarak seç."><div class="view-label"><span id="cityClock"></span></div></div>
+<div class="actions view-tools move-controls" aria-label="Kamera kontrolleri"><button data-move="left" aria-label="Sola">←</button><button data-move="up" aria-label="İleri">↑</button><button data-move="down" aria-label="Geri">↓</button><button data-move="right" aria-label="Sağa">→</button><button id="closer" aria-label="Yakınlaştır">+</button><button id="farther" aria-label="Uzaklaştır">−</button></div>
+<p class="camera-help">Sürükleyerek yön değiştir. Tekerlek veya iki parmakla yakınlaş. Ok tuşları ve WASD ile ilerle.</p>
+</section>
+<aside class="panel management" id="yonetim"><p class="kicker">ŞEHİR YÖNETİMİ</p><h2 id="cityLevel">Şehir durumu</h2>
+<dl id="stats"></dl>
+<div class="actions"><button id="toggle">Simülasyonu duraklat</button><button id="nextDay">1 gün ilerlet</button></div>
+<label class="policy">Yerleşim politikası<select id="populationPolicy"><option value="balanced">Dengeli</option><option value="growth">Göçü teşvik et</option><option value="quiet">Yeni yerleşimi sınırla</option></select></label>
+</aside></div>
+<div class="shelf"><section class="panel"><p class="kicker">ŞEHİR PLANLAMA</p><h2>Arsa ve bina</h2><div id="selection"></div>
+<label class="policy">Arsa seç <select id="lot"></select></label><label class="policy">İnşa edilecek yapı <select id="building"></select></label>
+<div class="actions"><button class="primary" id="build">İnşa et</button><button id="upgrade">Geliştir</button><button id="remove">Kaldır</button></div>
+<p id="message" role="status">Şehirden veya listeden bir arsa seç.</p></section><section class="panel"><h2>Belediye kayıtları</h2><p>İnşaat, bütçe, nüfus ve ayarlar bu tarayıcıda saklanır. Günlük bütçe hizmet ve altyapı giderleriyle değişir.</p><ul id="activity"></ul><button id="reset">Şehri sıfırla</button></section></div>
+</main></body></html>
