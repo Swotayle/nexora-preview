@@ -5,7 +5,9 @@
 <title>STUDORA — Öğrenci Kontrol Merkezi</title>
 <link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="studora.css">
 <link rel="stylesheet" href="focus-notes.css?v=03b">
-<script src="studora.js?v=03b" defer></script><script src="focus.js?v=03b" defer></script><script src="notes.js?v=03b" defer></script>
+<link rel="stylesheet" href="learning.css?v=03c"><script src="learning-model.js?v=03c" defer></script>
+<script src="studora.js?v=03c" defer></script><script src="focus.js?v=03b" defer></script><script src="notes.js?v=03b" defer></script>
+<script src="learning.js?v=03c" defer></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -19,6 +21,10 @@
 <a href="#gorevler" aria-label="Görevler"><span aria-hidden="true">☷</span><b>Görevler</b></a>
 <a href="#odak" aria-label="Odak Merkezi"><span aria-hidden="true">◉</span><b>Odak Merkezi</b></a>
 <a href="#notlar" aria-label="Akıllı Not Defteri"><span aria-hidden="true">▤</span><b>Akıllı Not Defteri</b></a>
+<a href="#not-hesaplama" aria-label="Not Hesaplama"><span aria-hidden="true">∑</span><b>Not Hesaplama</b></a>
+<a href="#istatistikler" aria-label="İstatistikler"><span aria-hidden="true">▥</span><b>İstatistikler</b></a>
+<a href="#basarilar" aria-label="Başarılar"><span aria-hidden="true">✧</span><b>Başarılar</b></a>
+<a href="#veriler" aria-label="Veri Yönetimi"><span aria-hidden="true">⇅</span><b>Veri Yönetimi</b></a>
 </nav>
 <a class="back" aria-label="NEXORA’ya dön" href="../index.html"><span aria-hidden="true">←</span><b>NEXORA’ya dön</b></a>
 </aside>
@@ -67,6 +73,40 @@
 <div class="actions"><button class="mini" id="noteFavorite" aria-pressed="false">Favori</button><button class="mini" id="notePin" aria-pressed="false">Sabitle</button><button class="mini" id="noteExport">TXT indir</button><button class="mini danger" id="noteDelete">Sil</button></div>
 </article>
 </div></section>
+<section id="not-hesaplama" class="page" hidden>
+<div class="page-head"><div><h1>Not Hesaplama</h1><p>Ders notlarını hesapla ve AKTS ağırlıklı ortalamalarını takip et.</p></div><button class="primary" id="newGrade">+ Ders notu ekle</button></div>
+<div id="gradeSummary" class="stats"></div>
+<div class="panel grade-filter"><label class="field">Dönem ortalaması<select id="gradeTerm"></select></label></div>
+<div class="grade-layout">
+<article class="panel"><header><h2>Ders kayıtları</h2></header><div id="gradeList"></div></article>
+<article class="panel" id="gradeCard"><h2 id="gradeEditTitle">Ders hesabı</h2>
+<form id="gradeForm"><div class="grade-fields"><label class="field">Ders adı<input id="gradeName" required maxlength="120" list="gradeCourses"><datalist id="gradeCourses"></datalist></label><label class="field">Dönem<input id="gradePeriod" required maxlength="60" placeholder="2026 Güz"></label><label class="field">AKTS<input id="gradeEcts" type="number" required min="0.5" max="60" step="0.5" value="5"></label></div>
+<div id="gradeParts"></div><p class="muted">Bütünleme notu girilirse finalin yerine geçer. Toplam ağırlık %100 olmalı.</p>
+<div class="actions"><button class="secondary" id="addGradePart" type="button">+ Değerlendirme</button><button class="primary" type="submit">Ders notunu kaydet</button></div>
+<p id="gradeFeedback" role="status"></p><div id="gradeResult"></div></form></article>
+</div>
+<details class="panel grade-policy"><summary>Geçme ve harf notu kuralları</summary><form id="gradeRulesForm">
+<p class="muted">Eşikler 100 üzerinden. Başarısız ders en düşük harf notunu alır. Kural değişiklikleri tüm ders kayıtlarına uygulanır.</p>
+<div class="grade-fields"><label class="field">Geçme notu<input id="gradePass" type="number" min="0" max="100" step="0.01" required></label><label class="field">Final alt sınırı<input id="gradeFinalMin" type="number" min="0" max="100" step="0.01" required></label></div><div id="gradeScale"></div>
+<div class="actions"><button class="secondary" id="addGradeBand" type="button">+ Harf notu</button><button class="primary" type="submit">Kuralları kaydet</button></div><p id="rulesFeedback" role="status"></p>
+</form></details></section>
+<section id="istatistikler" class="page" hidden>
+<div class="page-head"><div><h1>Çalışma İstatistikleri</h1><p>Pomodoro ve manuel çalışma kayıtlarının özeti.</p></div></div>
+<div id="analyticsSummary" class="stats"></div>
+<div class="insight-layout"><article class="panel"><header><h2>Çalışma eğilimi</h2><label class="field">Görünüm<select id="trendPeriod"><option value="day">Son 7 gün</option><option value="week">Son 8 hafta</option><option value="month">Son 6 ay</option></select></label></header>
+<div id="trendChart"></div><p id="trendDetail" class="muted" aria-live="polite"></p></article>
+<article class="panel"><header><h2>Ders dağılımı</h2></header><div id="courseBreakdown"></div></article></div>
+</section>
+<section id="basarilar" class="page" hidden>
+<div class="page-head"><div><h1>Başarılar</h1><p>Çalışmaların, görevlerin ve günlük hedeflerin seviye ilerlemeni oluşturur.</p></div></div>
+<article class="panel xp-panel"><div><h2 id="levelTitle"></h2><p id="xpTotal"></p></div><progress id="xpProgress" max="100" value="0" aria-label="Seviye ilerlemesi"></progress><small id="levelNext"></small></article>
+<div id="xpBreakdown" class="stats"></div><div id="badgeGrid" class="badge-grid"></div>
+</section>
+<section id="veriler" class="page" hidden>
+<div class="page-head"><div><h1>Veri Yönetimi</h1><p>Tarayıcıdaki STUDORA kayıtlarını yedekle ve geri yükle.</p></div></div>
+<div class="insight-layout"><article class="panel"><h2>JSON yedeği</h2><p class="muted">Dersler, notlar, çalışma kayıtları ve ayarlar tek dosyada.</p><button class="primary" id="backupDownload">Yedeği indir</button></article>
+<article class="panel"><h2>Yedeği geri yükle</h2><p class="muted">Dosya doğrulanır ve onayından sonra mevcut kayıtların üzerine yazılır.</p><label class="field">JSON dosyası<input type="file" id="backupFile" accept=".json,application/json"></label><p id="backupFeedback" role="status"></p></article></div>
+</section>
 </main>
 <footer class="footer">STUDORA · Verilerin bu tarayıcıda saklanır.</footer>
 </div>

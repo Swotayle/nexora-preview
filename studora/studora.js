@@ -5,9 +5,9 @@ const key='nexora.studora.v1';
 const days=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 const shortDays=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
 const priority={low:'Düşük',medium:'Orta',high:'Yüksek'};
-const headings={merkez:'Kontrol Merkezi',dersler:'Ders Programı',sinavlar:'Sınav Takvimi',gorevler:'Görevler',odak:'Odak Merkezi',notlar:'Akıllı Not Defteri'};
+const headings={merkez:'Kontrol Merkezi',dersler:'Ders Programı',sinavlar:'Sınav Takvimi',gorevler:'Görevler',odak:'Odak Merkezi',notlar:'Akıllı Not Defteri','not-hesaplama':'Not Hesaplama',istatistikler:'İstatistikler',basarilar:'Başarılar',veriler:'Veri Yönetimi'};
 const titles={lessons:'Ders',exams:'Sınav',tasks:'Görev',study:'Çalışma kaydı',goal:'Günlük çalışma hedefi'};
-const storageDefaults={lessons:[],exams:[],tasks:[],study:[],goal:0,theme:'dark',compact:false,notes:[],timer:null,focusPrefs:{}};
+const storageDefaults={lessons:[],exams:[],tasks:[],study:[],goal:0,theme:'dark',compact:false,notes:[],timer:null,focusPrefs:{},grades:[],gradeRules:learning.gradeRules,rewards:null};
 let state={...storageDefaults};
 let storageProblem=false;
 try { state={...storageDefaults,...JSON.parse(localStorage.getItem(key)??'{}')}; }
@@ -18,12 +18,14 @@ function syncStoredState(){
   catch { return false; }
   return true;
 }
-function persist(changes){
+function persist(changes,replace=false){
   if(!syncStoredState()){notify('Önceki kayıtlar okunamadı.');return false;}
-  const next={...state,...changes};
+  const next={...(replace?storageDefaults:state),...changes};
+  next.rewards=learning.earn(next,dayKey(),!replace&&Object.hasOwn(changes,'goal'));
   try{localStorage.setItem(key,JSON.stringify(next));}
   catch { notify('Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.');return false; }
   state=next;
+  window.dispatchEvent(new Event('studora-saved'));
   return true;
 }
 let noticeTimer;
@@ -175,7 +177,7 @@ const fields={
     input('room','Derslik','text',false,false),input('start','Başlangıç','time'),input('end','Bitiş','time'),input('color','Ders rengi','color')],
   exams:[input('name','Ders veya sınav adı','text',true),select('type','Sınav türü',['Vize','Final','Bütünleme','Kısa sınav'].map(x=>[x,x])),input('date','Tarih','date'),input('time','Saat','time')],
   tasks:[input('name','Görev adı','text',true),select('type','Görev türü',['Ödev','Çalışma'].map(x=>[x,x])),input('course','Ders kategorisi','text',false,false),input('due','Son teslim tarihi','date'),select('priority','Öncelik',Object.entries(priority))],
-  study:[input('date','Çalışma tarihi','date'),input('minutes','Süre (dakika)','number',false,true,'min="1" max="1440" step="1"')],
+  study:[input('course','Ders (isteğe bağlı)','text',true,false),input('date','Çalışma tarihi','date'),input('minutes','Süre (dakika)','number',false,true,'min="1" max="1440" step="1"')],
   goal:[input('minutes','Dakika (0 = hedefi kaldır)','number',true,true,'min="0" max="1440" step="1"')]
 };
 
@@ -244,4 +246,3 @@ app.classList.toggle('compact',!!state.compact);
 applyTheme();navigate();render();
 if(storageProblem)notify('Önceki kayıtlar okunamadı.');
 setInterval(()=>{if(!editor.open&&!document.activeElement?.matches('button,input,select'))render();},60000);
-
