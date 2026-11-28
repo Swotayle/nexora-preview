@@ -5,15 +5,21 @@ const key='nexora.studora.v1';
 const days=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 const shortDays=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
 const priority={low:'Düşük',medium:'Orta',high:'Yüksek'};
-const headings={merkez:'Kontrol Merkezi',dersler:'Ders Programı',sinavlar:'Sınav Takvimi',gorevler:'Görevler'};
+const headings={merkez:'Kontrol Merkezi',dersler:'Ders Programı',sinavlar:'Sınav Takvimi',gorevler:'Görevler',odak:'Odak Merkezi',notlar:'Akıllı Not Defteri'};
 const titles={lessons:'Ders',exams:'Sınav',tasks:'Görev',study:'Çalışma kaydı',goal:'Günlük çalışma hedefi'};
-const storageDefaults={lessons:[],exams:[],tasks:[],study:[],goal:0,theme:'dark',compact:false};
+const storageDefaults={lessons:[],exams:[],tasks:[],study:[],goal:0,theme:'dark',compact:false,notes:[],timer:null,focusPrefs:{}};
 let state={...storageDefaults};
 let storageProblem=false;
 try { state={...storageDefaults,...JSON.parse(localStorage.getItem(key)??'{}')}; }
 catch { storageProblem=true; }
 
+function syncStoredState(){
+  try { state={...storageDefaults,...JSON.parse(localStorage.getItem(key)??'{}')}; }
+  catch { return false; }
+  return true;
+}
 function persist(changes){
+  if(!syncStoredState()){notify('Önceki kayıtlar okunamadı.');return false;}
   const next={...state,...changes};
   try{localStorage.setItem(key,JSON.stringify(next));}
   catch { notify('Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.');return false; }
@@ -125,6 +131,7 @@ function render(){
   $('#examArchive').innerHTML=archived.map(x=>examCard(x,true)).join('')||empty('Arşiv boş.');
   $('#archiveCount').textContent='('+archived.length+')';
   renderTasks();
+  window.dispatchEvent(new Event('studora-change'));
 }
 const app=$('#app'), menu=$('#menu'), mobile=matchMedia('(max-width:850px)');
 function updateMenu(){

@@ -4,7 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>STUDORA — Öğrenci Kontrol Merkezi</title>
 <link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="studora.css">
-<script src="studora.js" defer></script>
+<link rel="stylesheet" href="focus-notes.css?v=03b">
+<script src="studora.js?v=03b" defer></script><script src="focus.js?v=03b" defer></script><script src="notes.js?v=03b" defer></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -16,6 +17,8 @@
 <a href="#dersler" aria-label="Ders Programı"><span aria-hidden="true">▦</span><b>Ders Programı</b></a>
 <a href="#sinavlar" aria-label="Sınav Takvimi"><span aria-hidden="true">◷</span><b>Sınav Takvimi</b></a>
 <a href="#gorevler" aria-label="Görevler"><span aria-hidden="true">☷</span><b>Görevler</b></a>
+<a href="#odak" aria-label="Odak Merkezi"><span aria-hidden="true">◉</span><b>Odak Merkezi</b></a>
+<a href="#notlar" aria-label="Akıllı Not Defteri"><span aria-hidden="true">▤</span><b>Akıllı Not Defteri</b></a>
 </nav>
 <a class="back" aria-label="NEXORA’ya dön" href="../index.html"><span aria-hidden="true">←</span><b>NEXORA’ya dön</b></a>
 </aside>
@@ -34,6 +37,36 @@
 <section id="dersler" class="page" hidden><div class="page-head"><div><h1>Ders Programı</h1><p>Haftalık derslerini gün ve saatlerine göre düzenle.</p></div><button class="primary" data-add="lessons">+ Ders ekle</button></div><div class="week" id="week"></div></section>
 <section id="sinavlar" class="page" hidden><div class="page-head"><div><h1>Sınav Takvimi</h1><p>Tarihine göre sıralanan sınavlar ve arşivin.</p></div><button class="primary" data-add="exams">+ Sınav ekle</button></div><div id="examList"></div><details class="panel archive"><summary>Tamamlanan sınavlar <span id="archiveCount"></span></summary><div id="examArchive"></div></details></section>
 <section id="gorevler" class="page" hidden><div class="page-head"><div><h1>Görevler</h1><p>Ödevlerini ve çalışma görevlerini yönet.</p></div><button class="primary" data-add="tasks">+ Görev ekle</button></div><div class="filters"><label>Ara<input id="search" type="search" placeholder="Görev veya ders ara"></label><label>Durum<select id="status"><option value="all">Tümü</option><option value="pending">Bekleyen</option><option value="done">Tamamlanan</option><option value="late">Geciken</option></select></label><label>Öncelik<select id="priority"><option value="all">Tümü</option><option value="high">Yüksek</option><option value="medium">Orta</option><option value="low">Düşük</option></select></label></div><div id="taskList"></div></section>
+<section id="odak" class="page" hidden>
+<div class="page-head"><div><h1>Odak Merkezi</h1><p>Tek bir derse odaklan. Bitirdiğin çalışma seansları hedefini ilerletsin.</p></div><button class="secondary" id="focusFullscreen" type="button">Tam ekran</button></div>
+<div class="focus-layout">
+<article class="panel focus-stage" id="focusStage">
+<div class="mode-tabs" aria-label="Seans türü"><button data-phase="work">Çalışma</button><button data-phase="short">Kısa mola</button><button data-phase="long">Uzun mola</button></div>
+<div class="focus-ring" id="focusRing"><div><span id="timerPhase"></span><strong id="timerClock" role="timer">25:00</strong><small id="timerStatus">Başlamaya hazır</small></div></div>
+<div class="focus-actions"><button id="timerMain" class="primary">Başlat</button><button id="timerReset" class="secondary">Sıfırla</button><button id="focusExit" class="secondary" hidden>Tam ekrandan çık</button></div>
+</article>
+<article class="panel focus-settings"><h2>Seans ayarları</h2><label class="field">Ders<select id="focusCourse"></select></label>
+<div class="duration-fields"><label class="field">Çalışma (dk)<input id="workMinutes" type="number" min="1" max="180"></label><label class="field">Kısa mola (dk)<input id="shortMinutes" type="number" min="1" max="180"></label><label class="field">Uzun mola (dk)<input id="longMinutes" type="number" min="1" max="180"></label></div>
+<label class="sound"><input type="checkbox" id="focusSound"> Sesli bitiş bildirimi</label>
+<p id="focusGoal" class="muted"></p><a href="#merkez">Günlük hedefi aç ↗</a></article>
+<article class="panel focus-history"><header><h2>Tamamlanan seanslar</h2></header><div id="focusHistory"></div></article>
+</div></section>
+<section id="notlar" class="page" hidden>
+<div class="page-head"><div><h1>Akıllı Not Defteri</h1><p>Ders notlarını düzenle ve önemli olanları el altında tut.</p></div><button class="primary" id="newNote">+ Yeni not</button></div>
+<div class="notes-layout">
+<article class="panel note-browser"><label class="field">Notlarda ara<input id="noteSearch" type="search" placeholder="Başlık veya içerik"></label>
+<label class="field">Ders<select id="notesCategory"></select></label><label class="sound"><input type="checkbox" id="notesFavorites"> Yalnızca favoriler</label><div id="noteList"></div></article>
+<article class="panel note-empty" id="noteEmpty"><h2>Notlarını burada tut</h2><p class="muted">Başlamak için yeni bir not oluştur veya listeden bir not seç.</p></article>
+<article class="panel note-editor" id="noteEditor" hidden>
+<label class="field">Başlık<input id="noteTitle" maxlength="120"></label>
+<div class="note-meta"><label class="field">Ders<select id="noteCourse"></select></label><label class="field">Etiket<select id="noteColor"><option value="violet">Mor</option><option value="blue">Mavi</option><option value="mint">Yeşil</option><option value="amber">Turuncu</option></select></label></div>
+<div class="note-toolbar" aria-label="Biçimlendirme"><button data-format="bold" type="button"><b>Kalın</b></button><button data-format="heading" type="button">Başlık</button><button data-format="bullet" type="button">• Liste</button><button data-format="check" type="button">☐ Kontrol listesi</button><button id="notePreviewToggle" type="button" aria-pressed="false">Önizle</button></div>
+<label class="field" id="noteBodyField">İçerik<textarea id="noteBody" rows="12" maxlength="60000" placeholder="Notunu buraya yaz…"></textarea></label>
+<div id="notePreview" class="note-preview" hidden></div>
+<p id="noteDates" class="muted"></p><p class="muted" id="noteSaved" aria-live="polite"></p>
+<div class="actions"><button class="mini" id="noteFavorite" aria-pressed="false">Favori</button><button class="mini" id="notePin" aria-pressed="false">Sabitle</button><button class="mini" id="noteExport">TXT indir</button><button class="mini danger" id="noteDelete">Sil</button></div>
+</article>
+</div></section>
 </main>
 <footer class="footer">STUDORA · Verilerin bu tarayıcıda saklanır.</footer>
 </div>
