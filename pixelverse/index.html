@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>PIXELVERSE — NEXORA</title><link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="../worlds.css"><link rel="stylesheet" href="pixel.css"><script type="module" src="arcade.js"></script></head>
+<body class="arcade"><header class="world-header"><a href="../">← NEXORA</a><strong>PIXELVERSE</strong><a href="#records">Rekorlar ↓</a></header>
+<main><section class="intro"><p class="kicker">NEXORA / OYUN MERKEZİ</p><h1>PIXEL<span>VERSE</span></h1><p>Kendi rekorunu kır. Dört oyunda refleksini, hafızanı ve stratejini dene.</p></section>
+<nav class="game-select" aria-label="Oyun seçimi">
+<button data-game="space" aria-pressed="true"><span>✧</span><strong>Space Survivor</strong><small>Uzayda hayatta kal</small></button>
+<button data-game="runner" aria-pressed="false"><span>⟫</span><strong>Neon Runner</strong><small>Üç boyutlu neon parkur</small></button>
+<button data-game="memory" aria-pressed="false"><span>◇</span><strong>Memory Matrix</strong><small>Kartların eşini bul</small></button>
+<button data-game="defense" aria-pressed="false"><span>⬡</span><strong>Cyber Defense</strong><small>Çekirdeği savun</small></button>
+</nav>
+<section class="panel play" id="play"><header><div><p class="kicker" id="genre"></p><h2 id="gameTitle"></h2></div><div class="actions"><button id="sound" aria-pressed="true">Ses açık</button><button id="fullscreen">Tam ekran</button></div></header>
+<p id="instructions"></p><div id="options"></div><p id="hud" class="hud"></p>
+<div class="stage"><canvas id="board" width="800" height="450" aria-label="Oyun alanı" tabindex="0"></canvas><div id="runner" hidden></div><div id="memory" hidden></div><div id="overlay"><div><strong id="status" role="status"></strong></div></div></div>
+<div class="actions" id="controls"><button id="start" class="primary">Başlat</button><button id="pause" disabled>Duraklat</button><button id="restart" disabled>Yeniden başlat</button></div><div id="touch" class="actions" aria-label="Dokunmatik kontroller"></div>
+</section>
+<section class="shelf" id="records"><div class="panel"><h2>Kişisel rekorlar</h2><div id="bests"></div></div><div class="panel"><h2>Başarılar</h2><div id="badges"></div></div><div class="panel"><h2>Oyun geçmişi</h2><div id="history"></div></div></section></main></body></html>
