@@ -4,7 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>CHRONOVA — NEXORA Zaman Yolculuğu</title>
 <link rel="icon" href="../assets/nexora-mark.svg"><link rel="stylesheet" href="chronova.css">
-<script src="history-data.js" defer></script><script src="chronova.js" defer></script>
+<script src="history-data.js" defer></script><script src="chronova.js?v=04b" defer></script>
+<link rel="stylesheet" href="explore.css?v=04b"><script src="explore-data.js?v=04b" defer></script><script src="explore.js?v=04b" defer></script>
 </head>
 <body>
 <header class="top"><a class="home" href="../index.html">← NEXORA</a><a class="brand" href="#main"><span aria-hidden="true">◷</span> CHRONOVA</a><nav aria-label="Arşiv"><a href="#eras">Dönemler</a><button id="openArchive">Kaydettiklerim</button></nav></header>
@@ -24,6 +25,22 @@
 <section class="panel event" aria-labelledby="eventTitle"><header><div><div class="eyebrow" id="eventContext">TARİHÎ OLAY</div><h2 id="eventTitle"></h2><p class="meta" id="eventMeta"></p></div><button id="favorite" aria-pressed="false">☆ Kaydet</button></header><p id="description"></p><h3>Neden önemli?</h3><p id="significance"></p><a id="eventSource" class="source" target="_blank" rel="noopener">Kaynak ↗</a></section>
 <section class="panel lookup" aria-labelledby="searchTitle"><h2 id="searchTitle">Tarihte bul</h2><label for="search">Olay, yer veya tarih</label><input id="search" type="search" placeholder="Örn. Malazgirt, MÖ 490, Apollo"><div id="results" aria-live="polite"></div></section>
 </div>
+<nav class="explore-nav" aria-label="Keşif bölümleri"><a href="#harita">Tarih haritası</a><a href="#yarisma">Tarih yarışması</a><a href="#gunluk">Keşif günlüğü</a><a href="#kisiler">Tarihî kişilikler</a></nav><section class="panel world-panel" id="harita" aria-labelledby="mapTitle">
+<header><div><span class="eyebrow">COĞRAFİ KEŞİF</span><h2 id="mapTitle">Tarih haritası</h2></div><div class="arrows"><button id="mapMinus" aria-label="Uzaklaştır">−</button><button id="mapPlus" aria-label="Yakınlaştır">+</button><button id="mapReset" aria-label="Haritayı sıfırla">↺</button></div></header>
+<div class="world-filters"><label>Dönem<select id="mapPeriod"></select></label><label>Göster<select id="mapLayer"><option value="both">Olaylar ve dönem merkezleri</option><option value="events">Yalnızca olaylar</option><option value="periods">Yalnızca medeniyet ve dönem merkezleri</option></select></label><label>Olay ara<input id="mapQuery" type="search" placeholder="Yer veya olay"></label></div>
+<div class="world-viewport"><svg id="worldMap" viewBox="0 0 1000 500" role="group" tabindex="0" aria-label="Dünya haritası. Sürükle veya ok tuşlarını kullan."><g id="worldLayer"><path id="worldGrid"></path><path id="worldLand"></path><g id="worldPins"></g></g></svg></div>
+<p id="mapStatus" class="muted" aria-live="polite"></p>
+<p class="map-legend"><span>● Olay</span><span>◆ Yaklaşık dönem merkezi</span> Konumlar yaklaşık, kıyılar güncel referanstır. Tarihî veya modern ülke sınırları çizilmez. <a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noopener">Natural Earth · Kamu malı</a></p>
+<div id="mapMatches" class="map-matches"></div>
+</section>
+<div class="reading exploration">
+<section class="panel" id="yarisma" aria-labelledby="quizTitle"><span class="eyebrow">10 SORULUK TUR</span><h2 id="quizTitle">Tarih yarışması</h2>
+<div id="quizSetup"><p>Arşivdeki olaylardan rastgele 10 soru seçilir. Dönem ve seviye filtreleriyle pratik yap.</p><div class="quiz-controls"><label>Dönem<select id="quizPeriod"></select></label><label>Zorluk<select id="quizLevel"><option value="">Tüm seviyeler</option><option>Kolay</option><option>Orta</option><option>Zor</option></select></label><button class="primary" id="quizStart">Yarışmayı başlat</button></div><p id="quizAvailability" class="muted"></p></div>
+<div id="quizRound" hidden></div><div id="quizResult" hidden></div></section>
+<section class="panel" id="gunluk" aria-labelledby="journalTitle"><span class="eyebrow">ZAMAN GEZGİNİ</span><h2 id="journalTitle">Keşif günlüğü</h2><div id="journalStats"></div><progress id="exploreProgress" max="100" value="0" aria-label="Keşif yüzdesi"></progress><div id="journalBadges"></div>
+<details><summary>Ziyaret edilen dönemler</summary><div id="journalPeriods"></div></details><details><summary>Keşfedilen olaylar</summary><div id="journalEvents"></div></details><details><summary>Favoriler</summary><div id="journalFavorites"></div></details><details><summary>Yarışma geçmişi</summary><div id="journalRuns"></div></details></section>
+</div>
+<section class="eras" id="kisiler" aria-labelledby="peopleTitle"><span class="eyebrow">TARİHİ ŞEKİLLENDİRENLER</span><h2 id="peopleTitle">Tarihî kişilikler</h2><div class="world-filters"><label>Kişi ara<input type="search" id="peopleQuery" placeholder="Örn. Gudea, Atatürk"></label><label>Dönem<select id="peoplePeriod"></select></label></div><div id="peopleGrid"></div></section>
 <section class="eras" id="eras" aria-labelledby="eraTitle"><div class="eyebrow">KEŞİF ARŞİVİ</div><h2 id="eraTitle">Dönemler ve medeniyetler</h2><p>Dönem adları birbiriyle örtüşebilir. Kartlar, belirli coğrafya ve temalara odaklanır.</p><div id="eraGrid"></div></section>
 </main>
 <dialog id="detail" aria-labelledby="detailTitle"><header><h2 id="detailTitle"></h2><button id="closeDetail" aria-label="Pencereyi kapat">×</button></header><div id="detailBody"></div></dialog>

@@ -7,15 +7,19 @@ const byPeriod=new Map(periods.map(p=>[p.id,p]));
 const storeKey='nexora.chronova.v1';
 const now=new Date().getFullYear();
 const turkish=new Intl.NumberFormat('tr-TR');
-let visits=[],favorites=[];
+let visits=[],favorites=[],discoveries=[],quizRuns=[],bestQuiz=0;
 try{
   const saved=JSON.parse(localStorage.getItem(storeKey)??'{}');
   if(Array.isArray(saved.visits))visits=saved.visits.filter(id=>byPeriod.has(id));
   if(Array.isArray(saved.favorites))favorites=saved.favorites.filter(id=>events.some(ev=>ev.id===id));
+  if(Array.isArray(saved.discoveries))discoveries=[...new Set(saved.discoveries.filter(id=>events.some(ev=>ev.id===id)))];
+  if(Array.isArray(saved.quizRuns))quizRuns=saved.quizRuns.filter(run=>run&&Number.isInteger(run.score)&&run.score>=0&&run.score<=100&&Number.isInteger(run.total)&&run.total>=1&&run.total<=10&&Number.isInteger(run.correct)&&run.correct>=0&&run.correct<=run.total&&typeof run.date==='string'&&Number.isFinite(Date.parse(run.date)));
+  bestQuiz=quizRuns.reduce((best,run)=>run.total===10?Math.max(best,run.score):best,0);
 }catch{}
 function save(){
-  try{localStorage.setItem(storeKey,JSON.stringify({visits,favorites}));}
+  try{localStorage.setItem(storeKey,JSON.stringify({visits,favorites,discoveries,quizRuns}));}
   catch{$('#jumpError').textContent='Tarayıcı arşivi kaydedilemedi.';}
+  window.dispatchEvent(new Event('chronova-records'));
 }
 const display=y=>(y<0?'MÖ ':'MS ')+turkish.format(Math.abs(y));
 const range=$('#timeline'), dialog=$('#detail');
@@ -73,7 +77,9 @@ function moveTo(y,index=nearest(y),exact=false){
   document.documentElement.style.setProperty('--accent',period.tint);
   paintImage(period);
   visits=[period.id,...visits.filter(id=>id!==period.id)];
+  if(event.year===y&&!discoveries.includes(event.id))discoveries.push(event.id);
   save();favoriteButton();
+  window.dispatchEvent(new Event('chronova-move'));
   document.querySelectorAll('[data-quick]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.quick===period.id)));
   document.querySelectorAll('[data-era]').forEach(b=>b.dataset.active=String(b.dataset.era===period.id));
   const machine=$('.machine');
